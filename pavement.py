@@ -15,7 +15,7 @@ setup(name='mpm',
       author='Christian Fobel',
       author_email='christian@fobel.net',
       url='https://github.com/wheeler-microfluidics/mpm',
-      license='LGPLv2',
+      license='LGPLv2.1',
       packages=['mpm', ],
       install_requires=['pip-helpers>=0.5.post5'],
       # Install data listed in `MANIFEST.in`
