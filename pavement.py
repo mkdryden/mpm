@@ -8,7 +8,7 @@ from distutils.dep_util import newer
 sys.path.insert(0, path('.').abspath())
 import version
 
-setup(name='mpm',
+setup(name='microdrop-plugin-manager',
       version=version.getVersion(),
       description='Microdrop plugin manager.',
       keywords='',
