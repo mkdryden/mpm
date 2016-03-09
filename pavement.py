@@ -8,22 +8,23 @@ from distutils.dep_util import newer
 sys.path.insert(0, path('.').abspath())
 import version
 
-setup(name='python-package-template',
+setup(name='mpm',
       version=version.getVersion(),
-      description='Add description here.',
+      description='Microdrop plugin manager.',
       keywords='',
-      author='Anonymous',
-      author_email='you@mail.com',
-      url='https://github.com/wheeler-microfluidics/python-package-template',
-      license='GPL',
-      packages=['python_package_template', ],
-      install_requires=[],
+      author='Christian Fobel',
+      author_email='christian@fobel.net',
+      url='https://github.com/wheeler-microfluidics/mpm',
+      license='LGPLv2',
+      packages=['mpm', ],
+      install_requires=['pip-helpers>=0.5.post5'],
       # Install data listed in `MANIFEST.in`
-      include_package_data=True)
+      include_package_data=True,
+      entry_points = {'console_scripts': ['mpm = mpm.bin:main']})
 
 
 @task
-@needs('generate_setup', 'minilib', 'setuptools.command.sdist') 
+@needs('generate_setup', 'minilib', 'setuptools.command.sdist')
 def sdist():
     """Overrides sdist to make sure that our setup.py is generated."""
     pass
