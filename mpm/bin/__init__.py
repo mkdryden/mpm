@@ -43,16 +43,22 @@ mutex_path.add_argument('-d', '--plugins-directory', type=path,
                         help='Microdrop plugins directory '
                         '(default="{default}").'
                         .format(default=default_plugins_directory))
+
 subparsers = MPM_PARSER.add_subparsers(help='help for subcommand',
                                        dest='command')
-subparsers.add_parser('install', help='Install plugins.',
-                      parents=[PLUGINS_PARSER, SERVER_PARSER])
+install_parser = subparsers.add_parser('install', help='Install plugins.',
+                                       parents=[SERVER_PARSER])
+plugin_group = install_parser.add_mutually_exclusive_group(required=True)
+plugin_group.add_argument('-r', '--requirements-file', type=path)
+plugin_group.add_argument('plugin', nargs='*', default=[])
+
 search_parser = subparsers.add_parser('search', help='Search server for '
                                       'plugin.', parents=[SERVER_PARSER])
 search_parser.add_argument('plugin')
 
 subparsers.add_parser('uninstall', help='Uninstall plugins.',
                       parents=[PLUGINS_PARSER])
+
 subparsers.add_parser('freeze', help='Output installed packages in '
                       'requirements format.')
 
@@ -85,6 +91,16 @@ def validate_args(args):
             validated/updated.
     '''
     logging.basicConfig(level=getattr(logging, args.log_level.upper()))
+
+    if args.command == 'install':
+        if args.requirements_file and not args.requirements_file.isfile():
+            print >> sys.stderr, ('Requirements file not available: {}'
+                                    .format(args.requirements_file))
+            raise SystemExit(-1)
+        elif not args.plugin and not args.requirements_file:
+            print >> sys.stderr, ('Requirements file or at least one plugin '
+                                  'must be specified.')
+            raise SystemExit(-2)
     if hasattr(args, 'server_url'):
         logger.debug('Using Microdrop index server: "%s"', args.server_url)
         args.server_url = SERVER_URL_TEMPLATE % args.server_url
@@ -112,6 +128,8 @@ def main(args=None):
     if args.command == 'freeze':
         print '\n'.join(freeze(plugins_directory=args.plugins_directory))
     elif args.command == 'install':
+        if args.requirements_file:
+            args.plugin = args.requirements_file.lines()
         for plugin_i in args.plugin:
             try:
                 install(plugin_package=plugin_i,
