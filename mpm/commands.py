@@ -6,6 +6,7 @@ Inspired by `pip`.
     mpm install -r plugin_requirements.txt
     mpm remove <plugin-name>
 '''
+from collections import OrderedDict
 import cStringIO as StringIO
 import os
 
@@ -89,31 +90,31 @@ def plugin_request(plugin_str):
     return match.groupdict()
 
 
-
 def install(plugin_package, plugins_directory, server_url=DEFAULT_SERVER_URL):
     '''
     Args
     ----
 
-        plugin_package (str) : Name of plugin package hosted on Microdrop plugin index.
-            Version constraints are also supported (e.g., `"foo", "foo==1.0",
-            "foo>=1.0"`, etc.)  See [version specifiers][1] reference for more
-            details.
+        plugin_package (str) : Name of plugin package hosted on Microdrop
+            plugin index. Version constraints are also supported (e.g., `"foo",
+            "foo==1.0", "foo>=1.0"`, etc.)  See [version specifiers][1]
+            reference for more details.
         plugins_directory (str) : Path to Microdrop user plugins directory.
-        server_url (str) : URL of JSON request for Microdrop plugins package index.
-            See `DEFAULT_SERVER_URL` for default.
+        server_url (str) : URL of JSON request for Microdrop plugins package
+            index.  See `DEFAULT_SERVER_URL` for default.
 
     Returns
     -------
 
-        (path, dict) : Path to directory of installed plugin and plugin package metadata
-            dictionary.
+        (path, dict) : Path to directory of installed plugin and plugin package
+            metadata dictionary.
 
     [1]: https://www.python.org/dev/peps/pep-0440/#version-specifiers
     '''
     # Look up latest release matching specifiers.
     try:
-        name, releases = pip_helpers.get_releases(plugin_package, server_url=server_url)
+        name, releases = pip_helpers.get_releases(plugin_package,
+                                                  server_url=server_url)
         version, release = releases.items()[-1]
     except KeyError:
         raise
@@ -124,7 +125,8 @@ def install(plugin_package, plugins_directory, server_url=DEFAULT_SERVER_URL):
     if not plugin_path.isdir():
         existing_version = None
     else:
-        plugin_metadata = yaml.load(plugin_path.joinpath('properties.yml').bytes())
+        plugin_metadata = yaml.load(plugin_path.joinpath('properties.yml')
+                                    .bytes())
         existing_version = plugin_metadata['version']
 
     if version == existing_version:
@@ -238,3 +240,27 @@ def freeze(plugins_directory):
         except:
             continue
     return ['%s==%s' % v for v in package_versions]
+
+
+def search(plugin_package, server_url=DEFAULT_SERVER_URL):
+    '''
+    Args
+    ----
+
+        plugin_package (str) : Name of plugin package hosted on Microdrop
+            plugin index. Version constraints are also supported (e.g., `"foo",
+            "foo==1.0", "foo>=1.0"`, etc.)  See [version specifiers][1]
+            reference for more details.
+        server_url (str) : URL of JSON request for Microdrop plugins package
+            index.  See `DEFAULT_SERVER_URL` for default.
+
+    Returns
+    -------
+
+        (str, OrderedDict) : Name of found plugin and mapping of version
+            strings to plugin package metadata dictionaries.
+
+    [1]: https://www.python.org/dev/peps/pep-0440/#version-specifiers
+    '''
+    # Look up latest release matching specifiers.
+    return pip_helpers.get_releases(plugin_package, server_url=server_url)

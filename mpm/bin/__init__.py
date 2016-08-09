@@ -1,11 +1,16 @@
 # coding: utf-8
 from argparse import ArgumentParser
-from path_helpers import path
+from collections import OrderedDict
+import datetime as dt
 import logging
 import sys
 
+from path_helpers import path
+import si_prefix as si
+
+from .. import pformat_dict
 from ..commands import (DEFAULT_INDEX_HOST, freeze, get_plugins_directory,
-                        install, SERVER_URL_TEMPLATE, uninstall)
+                        install, SERVER_URL_TEMPLATE, uninstall, search)
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +47,10 @@ subparsers = MPM_PARSER.add_subparsers(help='help for subcommand',
                                        dest='command')
 subparsers.add_parser('install', help='Install plugins.',
                       parents=[PLUGINS_PARSER, SERVER_PARSER])
+search_parser = subparsers.add_parser('search', help='Search server for '
+                                      'plugin.', parents=[SERVER_PARSER])
+search_parser.add_argument('plugin')
+
 subparsers.add_parser('uninstall', help='Uninstall plugins.',
                       parents=[PLUGINS_PARSER])
 subparsers.add_parser('freeze', help='Output installed packages in '
@@ -115,3 +124,29 @@ def main(args=None):
         for plugin_i in args.plugin:
             uninstall(plugin_package=plugin_i,
                       plugins_directory=args.plugins_directory)
+    elif args.command == 'search':
+        try:
+            plugin_name, releases = search(plugin_package=args.plugin,
+                                           server_url=args.server_url)
+            release_info = OrderedDict()
+            release_info['plugin_name'] = [plugin_name] + ((len(releases) - 1)
+                                                           * [''])
+            release_info['version'] = releases.keys()
+
+            for k in ['upload_time', 'size']:
+                release_info[k] = [r[k] for r in releases.values()]
+
+            release_info['upload_time'] = map(lambda timestamp: dt.datetime
+                                              .strptime(timestamp,
+                                                        r'%Y-%m-%dT'
+                                                        r'%H:%M:%S.%f')
+                                              .strftime('%Y-%m-%d %H:%M'),
+                                              release_info['upload_time'])
+            release_info['size'] = map(lambda s:
+                                       si.si_format(s, precision=0, format_str=
+                                                    '{value} {prefix}B'),
+                                       release_info['size'])
+
+            print '\n' + pformat_dict(release_info)
+        except KeyError, exception:
+            print >> sys.stderr, exception.message
