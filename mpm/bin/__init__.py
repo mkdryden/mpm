@@ -69,6 +69,10 @@ subparsers.add_parser('uninstall', help='Uninstall plugins.',
 subparsers.add_parser('freeze', help='Output installed packages in '
                       'requirements format.')
 
+hook_parser = subparsers.add_parser('hook', help='Execute plugin hook')
+hook_parser.add_argument('hook', choices=['on_install'], help='Plugin hook')
+hook_parser.add_argument('plugin', nargs='*')
+
 
 def parse_args(args=None):
     '''Parses arguments, returns (options, args).'''
@@ -134,6 +138,25 @@ def main(args=None):
     logger.debug('Arguments: %s', args)
     if args.command == 'freeze':
         print '\n'.join(freeze(plugins_directory=args.plugins_directory))
+    elif args.command == 'hook':
+        if not args.plugin:
+            plugin_paths = args.plugins_directory.dirs()
+        else:
+            plugin_paths = [args.plugins_directory.joinpath(p)
+                            for p in args.plugin]
+        print 50 * '*'
+        print '# Processing `on_install` hook for: #\n'
+        print '\n'.join(['  - {}{}'.format(p.name, '' if p.exists()
+                                           else ' (not found)')
+                         for p in plugin_paths])
+        print ''
+        if args.hook == 'on_install':
+            for plugin_path_i in plugin_paths:
+                print 50 * '-'
+                if plugin_path_i.exists():
+                    on_plugin_install(plugin_path_i)
+                else:
+                    print >> sys.stderr, '[warning] Skipping missing plugin'
     elif args.command == 'install':
         if args.requirements_file:
             args.plugin = args.requirements_file.lines()
