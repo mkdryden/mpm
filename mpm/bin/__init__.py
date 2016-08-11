@@ -36,13 +36,16 @@ SERVER_PARSER.add_argument('-s', '--server-url',
 PLUGINS_PARSER = ArgumentParser(add_help=False)
 PLUGINS_PARSER.add_argument('plugin', nargs='+')
 
-MPM_PARSER = ArgumentParser(add_help=False, parents=[LOG_PARSER])
-mutex_path = MPM_PARSER.add_mutually_exclusive_group()
+PLUGINS_DIR_PARSER = ArgumentParser(add_help=False)
+mutex_path = PLUGINS_DIR_PARSER.add_mutually_exclusive_group()
 mutex_path.add_argument(*CONFIG_PARSER_ARGS[0], **CONFIG_PARSER_ARGS[1])
 mutex_path.add_argument('-d', '--plugins-directory', type=path,
                         help='Microdrop plugins directory '
                         '(default="{default}").'
                         .format(default=default_plugins_directory))
+
+MPM_PARSER = ArgumentParser(add_help=False, parents=[LOG_PARSER,
+                                                     PLUGINS_DIR_PARSER])
 
 subparsers = MPM_PARSER.add_subparsers(help='help for subcommand',
                                        dest='command')
