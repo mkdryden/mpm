@@ -11,6 +11,7 @@ import si_prefix as si
 from .. import pformat_dict
 from ..commands import (DEFAULT_INDEX_HOST, freeze, get_plugins_directory,
                         install, SERVER_URL_TEMPLATE, uninstall, search)
+from ..hooks import on_plugin_install
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,9 @@ subparsers = MPM_PARSER.add_subparsers(help='help for subcommand',
                                        dest='command')
 install_parser = subparsers.add_parser('install', help='Install plugins.',
                                        parents=[SERVER_PARSER])
+install_parser.add_argument('--no-on-install', action='store_true',
+                            help='Do not run `on_plugin_install` hook after '
+                            'installing plugin')
 plugin_group = install_parser.add_mutually_exclusive_group(required=True)
 plugin_group.add_argument('-r', '--requirements-file', type=path)
 plugin_group.add_argument('plugin', nargs='*', default=[])
@@ -135,9 +139,12 @@ def main(args=None):
             args.plugin = args.requirements_file.lines()
         for plugin_i in args.plugin:
             try:
-                install(plugin_package=plugin_i,
-                        plugins_directory=args.plugins_directory,
-                        server_url=args.server_url)
+                path_i, meta_i = install(plugin_package=plugin_i,
+                                         plugins_directory=
+                                         args.plugins_directory,
+                                         server_url=args.server_url)
+                if not args.no_on_install:
+                    on_plugin_install(path_i)
             except ValueError, exception:
                 print exception.message
                 continue
