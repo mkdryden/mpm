@@ -159,7 +159,8 @@ def main(args=None):
                     print >> sys.stderr, '[warning] Skipping missing plugin'
     elif args.command == 'install':
         if args.requirements_file:
-            args.plugin = args.requirements_file.lines()
+            args.plugin = [line for line in args.requirements_file.lines()
+                           if not line.startswith('#')]
         for plugin_i in args.plugin:
             try:
                 path_i, meta_i = install(plugin_package=plugin_i,
