@@ -171,10 +171,6 @@ def main(args=None):
             except ValueError, exception:
                 print exception.message
                 continue
-    elif args.command == 'uninstall':
-        for plugin_i in args.plugin:
-            uninstall(plugin_package=plugin_i,
-                      plugins_directory=args.plugins_directory)
     elif args.command == 'search':
         try:
             plugin_name, releases = search(plugin_package=args.plugin,
@@ -201,3 +197,7 @@ def main(args=None):
             print '\n' + pformat_dict(release_info)
         except KeyError, exception:
             print >> sys.stderr, exception.message
+    elif args.command == 'uninstall':
+        for plugin_i in args.plugin:
+            uninstall(plugin_package=plugin_i,
+                      plugins_directory=args.plugins_directory)
