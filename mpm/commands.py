@@ -9,6 +9,7 @@ Inspired by `pip`.
 from collections import OrderedDict
 import cStringIO as StringIO
 import os
+import tempfile as tmp
 
 from path_helpers import path
 from pip_helpers import CRE_PACKAGE
@@ -111,13 +112,22 @@ def install(plugin_package, plugins_directory, server_url=DEFAULT_SERVER_URL):
 
     [1]: https://www.python.org/dev/peps/pep-0440/#version-specifiers
     '''
-    # Look up latest release matching specifiers.
-    try:
-        name, releases = pip_helpers.get_releases(plugin_package,
-                                                  server_url=server_url)
-        version, release = releases.items()[-1]
-    except KeyError:
-        raise
+    if path(plugin_package).isfile():
+        plugin_is_file = True
+        with open(plugin_package, 'rb') as plugin_file:
+            # Plugin package is a file.
+            plugin_file_metadata = extract_metadata(plugin_file)
+        name = plugin_file_metadata['package_name']
+        version = plugin_file_metadata['version']
+    else:
+        plugin_is_file = False
+        # Look up latest release matching specifiers.
+        try:
+            name, releases = pip_helpers.get_releases(plugin_package,
+                                                    server_url=server_url)
+            version, release = releases.items()[-1]
+        except KeyError:
+            raise
 
     # Check existing version (if any).
     plugin_path = plugins_directory.joinpath(name)
@@ -142,36 +152,62 @@ def install(plugin_package, plugins_directory, server_url=DEFAULT_SERVER_URL):
     # ======================
     print 'Installing `{}=={}`.'.format(name, version)
 
-    # Download plugin release archive.
-    download = requests.get(release['url'], stream=True)
+    if not plugin_is_file:
+        # Download plugin release archive.
+        download = requests.get(release['url'], stream=True)
 
-    plugin_archive_bytes = StringIO.StringIO()
-    total_bytes = int(download.headers['Content-length'])
-    bytes_read = 0
+        plugin_archive_bytes = StringIO.StringIO()
+        total_bytes = int(download.headers['Content-length'])
+        bytes_read = 0
 
-    with progressbar.ProgressBar(max_value=total_bytes) as bar:
-        while bytes_read < total_bytes:
-            chunk_i = download.raw.read(1 << 8)
-            bytes_read += len(chunk_i)
-            plugin_archive_bytes.write(chunk_i)
-            bar.update(bytes_read)
+        with progressbar.ProgressBar(max_value=total_bytes) as bar:
+            while bytes_read < total_bytes:
+                chunk_i = download.raw.read(1 << 8)
+                bytes_read += len(chunk_i)
+                plugin_archive_bytes.write(chunk_i)
+                bar.update(bytes_read)
 
-    # Extract downloaded plugin to install path.
-    plugin_archive_bytes.seek(0)
-    tar = tarfile.open(mode="r:gz", fileobj=plugin_archive_bytes)
+        # Extract downloaded plugin to install path.
+        plugin_archive_bytes.seek(0)
+    else:
+        plugin_archive_bytes = open(plugin_package, 'rb')
+
+    plugin_path, plugin_metadata = install_fileobj(plugin_archive_bytes,
+                                                   plugin_path)
+    # Ensure installed package and version does not match requested version.
+    assert(all([plugin_metadata['package_name'] == name,
+                plugin_metadata['version'] == version]))
+    print '  \--> done'
+    plugin_archive_bytes.close()
+    return plugin_path, plugin_metadata
+
+
+def extract_metadata(fileobj):
+    tar = tarfile.open(mode="r:gz", fileobj=fileobj)
+
+    plugin_path = path(tmp.mkdtemp(prefix='mpm-'))
+    try:
+        tar.extractall(plugin_path)
+
+        return yaml.load(plugin_path.joinpath('properties.yml').bytes())
+    finally:
+        fileobj.seek(0)
+        plugin_path.rmtree()
+
+
+def install_fileobj(fileobj, plugin_path):
+    plugin_path = path(plugin_path)
+    tar = tarfile.open(mode="r:gz", fileobj=fileobj)
 
     try:
         tar.extractall(plugin_path)
 
         plugin_metadata = yaml.load(plugin_path.joinpath('properties.yml').bytes())
-        # Ensure installed package and version does not match requested version.
-        assert(all([plugin_metadata['package_name'] == name,
-                    plugin_metadata['version'] == version]))
+        fileobj.seek(0)
     except:
         # Error occured, so delete extracted plugin.
         plugin_path.rmtree()
         raise
-    print '  \--> done'
 
     # TODO Handle `requirements.txt`.
     return plugin_path, plugin_metadata
