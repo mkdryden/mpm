@@ -18,7 +18,7 @@ setup(name='microdrop-plugin-manager',
       license='LGPLv2.1',
       packages=['mpm', ],
       install_requires=['configobj', 'path-helpers', 'pip-helpers>=0.6',
-                        'progressbar2', 'si-prefix>=0.4.post3'],
+                        'progressbar2', 'pyyaml', 'si-prefix>=0.4.post3'],
       # Install data listed in `MANIFEST.in`
       include_package_data=True,
       entry_points = {'console_scripts': ['mpm = mpm.bin:main']})
