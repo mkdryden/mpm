@@ -1,3 +1,4 @@
+import platform
 import sys
 
 from paver.easy import task, needs, path, sh, cmdopts, options
@@ -8,6 +9,13 @@ from distutils.dep_util import newer
 sys.path.insert(0, path('.').abspath())
 import version
 
+
+install_requires = ['configobj', 'path-helpers', 'pip-helpers>=0.6',
+                    'progressbar2', 'pyyaml', 'si-prefix>=0.4.post3']
+
+if platform.system() == 'Windows':
+    install_requires += ['pywin32']
+
 setup(name='microdrop-plugin-manager',
       version=version.getVersion(),
       description='Microdrop plugin manager.',
@@ -17,8 +25,7 @@ setup(name='microdrop-plugin-manager',
       url='https://github.com/wheeler-microfluidics/mpm',
       license='LGPLv2.1',
       packages=['mpm', ],
-      install_requires=['configobj', 'path-helpers', 'pip-helpers>=0.6',
-                        'progressbar2', 'pyyaml', 'si-prefix>=0.4.post3'],
+      install_requires=install_requires,
       # Install data listed in `MANIFEST.in`
       include_package_data=True,
       entry_points = {'console_scripts': ['mpm = mpm.bin:main']})
