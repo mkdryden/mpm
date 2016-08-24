@@ -75,7 +75,7 @@ hook_parser.add_argument('plugin', nargs='*')
 
 
 def parse_args(args=None):
-    '''Parses arguments, returns (options, args).'''
+    '''Parses arguments, returns ``(options, args)``.'''
     if args is None:
         args = sys.argv
 
@@ -89,17 +89,16 @@ def validate_args(args):
     '''
     Apply custom validation and actions based on parsed arguments.
 
-    Args
-    ----
-
-        args (Namespace) : Result from `parse_args` method of
-            `argparse.ArgumentParser` instance.
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Result from ``parse_args`` method of ``argparse.ArgumentParser``
+        instance.
 
     Returns
     -------
-
-        (Namespace) : Reference to input `args`, which have been
-            validated/updated.
+    argparse.Namespace
+        Reference to input ``args``, which have been validated/updated.
     '''
     logging.basicConfig(level=getattr(logging, args.log_level.upper()))
 

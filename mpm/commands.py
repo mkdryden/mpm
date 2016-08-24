@@ -2,11 +2,13 @@
 '''
 Inspired by `pip`.
 
+::
+
     mpm install <plugin-name>[(==|>|>=|<=)version] [<plugin-name>[(==|>|>=|<=)version]...]
     mpm install -r plugin_requirements.txt
-    mpm remove <plugin-name>
+    mpm uninstall <plugin-name>
+    mpm freeze
 '''
-from collections import OrderedDict
 import cStringIO as StringIO
 import os
 import tempfile as tmp
@@ -29,10 +31,9 @@ DEFAULT_SERVER_URL = SERVER_URL_TEMPLATE % DEFAULT_INDEX_HOST
 
 def home_dir():
     '''
-    Returns
-    -------
+    Returns:
 
-        (str) : Path to home directory (or `Documents` directory on Windows).
+        str : Path to home directory (or ``Documents`` directory on Windows).
     '''
     if os.name == 'nt':
         from win32com.shell import shell, shellcon
@@ -44,21 +45,21 @@ def home_dir():
 
 def get_plugins_directory(config_path=None, microdrop_user_root=None):
     '''
-    Args
-    ----
-
-        config_path (str) : Configuration file path (i.e., path to `microdrop.ini`).
-            If `None`, `<home directory>/Microdrop/microdrop.ini` is used.
-        microdrop_user_root (str) : Path to Microdrop user data directory.
-            If `None`, `<home directory>/Microdrop` is used.
+    Parameters
+    ----------
+    config_path : str
+        Configuration file path (i.e., path to ``microdrop.ini``). If ``None``,
+        ``<home directory>/Microdrop/microdrop.ini`` is used.
+    microdrop_user_root : str
+        Path to Microdrop user data directory. If ``None``,
+        ``<home directory>/Microdrop`` is used.
 
     Returns
     -------
-
-        (path) : Absolute path to plugins directory.  If plugins directory
-            setting cannot be resolved from a configuration file, the default
-            plugins directory will be used:
-            `<home directory>/Microdrop/plugins`.
+    path
+        Absolute path to plugins directory.  If plugins directory setting
+        cannot be resolved from a configuration file, the default plugins
+        directory will be used: ``<home directory>/Microdrop/plugins``.
     '''
     # # Find plugins directory path #
     if microdrop_user_root is None:
@@ -84,6 +85,9 @@ def get_plugins_directory(config_path=None, microdrop_user_root=None):
 
 
 def plugin_request(plugin_str):
+    '''
+    Extract plugin name and version specifiers from plugin descriptor string.
+    '''
     match = CRE_PACKAGE.match(plugin_str)
     if not match:
         raise ValueError('Invalid plugin descriptor. Must be like "foo", '
@@ -93,24 +97,28 @@ def plugin_request(plugin_str):
 
 def install(plugin_package, plugins_directory, server_url=DEFAULT_SERVER_URL):
     '''
-    Args
-    ----
-
-        plugin_package (str) : Name of plugin package hosted on Microdrop
-            plugin index. Version constraints are also supported (e.g., `"foo",
-            "foo==1.0", "foo>=1.0"`, etc.)  See [version specifiers][1]
-            reference for more details.
-        plugins_directory (str) : Path to Microdrop user plugins directory.
-        server_url (str) : URL of JSON request for Microdrop plugins package
-            index.  See `DEFAULT_SERVER_URL` for default.
+    Parameters
+    ----------
+    plugin_package : str
+        Name of plugin package hosted on Microdrop plugin index. Version
+        constraints are also supported (e.g., ``"foo", "foo==1.0",
+        "foo>=1.0"``, etc.)  See `version specifiers`_ reference for more
+        details.
+    plugins_directory : str
+        Path to Microdrop user plugins directory.
+    server_url : str
+        URL of JSON request for Microdrop plugins package index.  See
+        ``DEFAULT_SERVER_URL`` for default.
 
     Returns
     -------
+    (path, dict)
+        Path to directory of installed plugin and plugin package metadata
+        dictionary.
 
-        (path, dict) : Path to directory of installed plugin and plugin package
-            metadata dictionary.
 
-    [1]: https://www.python.org/dev/peps/pep-0440/#version-specifiers
+    .. _version specifiers:
+        https://www.python.org/dev/peps/pep-0440/#version-specifiers
     '''
     if path(plugin_package).isfile():
         plugin_is_file = True
@@ -124,7 +132,7 @@ def install(plugin_package, plugins_directory, server_url=DEFAULT_SERVER_URL):
         # Look up latest release matching specifiers.
         try:
             name, releases = pip_helpers.get_releases(plugin_package,
-                                                    server_url=server_url)
+                                                      server_url=server_url)
             version, release = releases.items()[-1]
         except KeyError:
             raise
@@ -183,6 +191,20 @@ def install(plugin_package, plugins_directory, server_url=DEFAULT_SERVER_URL):
 
 
 def extract_metadata(fileobj):
+    '''
+    Extract metadata from plugin archive file-like object (e.g., opened file,
+    ``StringIO``).
+
+    Parameters
+    ----------
+    fileobj : file-like
+        Microdrop plugin archive file object.
+
+    Returns
+    -------
+    dict
+        Metadata dictionary for plugin.
+    '''
     tar = tarfile.open(mode="r:gz", fileobj=fileobj)
 
     plugin_path = path(tmp.mkdtemp(prefix='mpm-'))
@@ -196,6 +218,22 @@ def extract_metadata(fileobj):
 
 
 def install_fileobj(fileobj, plugin_path):
+    '''
+    Extract and install plugin from file-like object (e.g., opened file,
+    ``StringIO``).
+
+    Parameters
+    ----------
+    fileobj : file-like
+        Microdrop plugin file object to extract and install.
+    plugin_path : path
+        Target plugin install directory path.
+
+    Returns
+    -------
+    (path, dict)
+        Directory of installed plugin and metadata dictionary for plugin.
+    '''
     plugin_path = path(plugin_path)
     tar = tarfile.open(mode="r:gz", fileobj=fileobj)
 
@@ -215,16 +253,12 @@ def install_fileobj(fileobj, plugin_path):
 
 def uninstall(plugin_package, plugins_directory):
     '''
-    Args
-    ----
-
-        plugin_package (str) : Name of plugin package hosted on Microdrop plugin index.
-        plugins_directory (str) : Path to Microdrop user plugins directory.
-
-    Returns
-    -------
-
-        None
+    Parameters
+    ----------
+    plugin_package : str
+        Name of plugin package hosted on Microdrop plugin index.
+    plugins_directory : str
+        Path to Microdrop user plugins directory.
     '''
     # Check existing version (if any).
     plugin_path = plugins_directory.joinpath(plugin_package)
@@ -253,15 +287,15 @@ def uninstall(plugin_package, plugins_directory):
 
 def freeze(plugins_directory):
     '''
-    Args
-    ----
-
-        plugins_directory (str) : Path to Microdrop user plugins directory.
+    Parameters
+    ----------
+    plugins_directory : str
+        Path to Microdrop user plugins directory.
 
     Returns
     -------
-
-        (list) : List of package strings corresponding to installed plugin versions.
+    list
+        List of package strings corresponding to installed plugin versions.
     '''
     # Check existing version (if any).
     package_versions = []
@@ -280,23 +314,26 @@ def freeze(plugins_directory):
 
 def search(plugin_package, server_url=DEFAULT_SERVER_URL):
     '''
-    Args
-    ----
-
-        plugin_package (str) : Name of plugin package hosted on Microdrop
-            plugin index. Version constraints are also supported (e.g., `"foo",
-            "foo==1.0", "foo>=1.0"`, etc.)  See [version specifiers][1]
-            reference for more details.
-        server_url (str) : URL of JSON request for Microdrop plugins package
-            index.  See `DEFAULT_SERVER_URL` for default.
+    Parameters
+    ----------
+    plugin_package : str
+        Name of plugin package hosted on Microdrop plugin index. Version
+        constraints are also supported (e.g., ``"foo", "foo==1.0",
+        "foo>=1.0"``, etc.)  See `version specifiers`_ reference for more
+        details.
+    server_url : str
+        URL of JSON request for Microdrop plugins package index.  See
+        ``DEFAULT_SERVER_URL`` for default.
 
     Returns
     -------
+    (str, OrderedDict)
+        Name of found plugin and mapping of version strings to plugin package
+        metadata dictionaries.
 
-        (str, OrderedDict) : Name of found plugin and mapping of version
-            strings to plugin package metadata dictionaries.
 
-    [1]: https://www.python.org/dev/peps/pep-0440/#version-specifiers
+    .. _version specifiers:
+        https://www.python.org/dev/peps/pep-0440/#version-specifiers
     '''
     # Look up latest release matching specifiers.
     return pip_helpers.get_releases(plugin_package, server_url=server_url)
