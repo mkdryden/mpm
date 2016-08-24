@@ -1,3 +1,4 @@
 numpydoc
+path-helpers
 pip-helpers>=0.6
 progressbar2
