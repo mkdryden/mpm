@@ -1,3 +1,7 @@
+Microdrop plugin manager inspired by ``pip``.
+
+------------------------------------------------------------------------
+
 Installation
 ============
 
