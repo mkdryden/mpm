@@ -75,3 +75,21 @@ Install plugin from archive file:
 Print list of installed plugins:
 
     mpm freeze
+
+------------------------------------------------------------------------
+
+Documentation
+=============
+
+Documentation is available online [here][1] .
+
+------------------------------------------------------------------------
+
+Development
+===========
+
+Project is hosted on [GitHub][2] .
+
+
+[1]: http://microdrop-plugin-manager.readthedocs.io
+[2]: https://github.com/wheeler-microfluidics/mpm

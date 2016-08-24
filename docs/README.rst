@@ -1,3 +1,7 @@
+Microdrop plugin manager inspired by ``pip``.
+
+--------------
+
 Installation
 ============
 
@@ -94,3 +98,19 @@ Print list of installed plugins:
 ::
 
     mpm freeze
+
+--------------
+
+Documentation
+=============
+
+Documentation is available online
+`here <http://microdrop-plugin-manager.readthedocs.io>`__ .
+
+--------------
+
+Development
+===========
+
+Project is hosted on
+`GitHub <https://github.com/wheeler-microfluidics/mpm>`__ .
