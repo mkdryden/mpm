@@ -120,11 +120,13 @@ def validate_args(args):
         logger.debug('Using default plugins directory: "%s"',
                      args.plugins_directory)
     elif args.plugins_directory is None:
+        args.config_file = args.config_file.realpath()
         args.plugins_directory = get_plugins_directory(config_path=
                                                        args.config_file)
         logger.debug('Plugins directory from config file: "%s"',
                      args.plugins_directory)
     else:
+        args.plugins_directory = args.plugins_directory.realpath()
         logger.debug('Using explicit plugins directory: "%s"',
                      args.plugins_directory)
     return args
