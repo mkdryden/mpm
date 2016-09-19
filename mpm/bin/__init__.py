@@ -102,7 +102,7 @@ def validate_args(args):
     '''
     logging.basicConfig(level=getattr(logging, args.log_level.upper()))
 
-    if args.command == 'install':
+    if getattr(args, 'command', None) == 'install':
         if args.requirements_file and not args.requirements_file.isfile():
             print >> sys.stderr, ('Requirements file not available: {}'
                                     .format(args.requirements_file))
