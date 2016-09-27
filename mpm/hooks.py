@@ -37,9 +37,17 @@ def on_plugin_install(plugin_directory, ostream=sys.stdout):
                     plugin_directory.name)
         os.chdir(hook_path_i.parent)
         try:
-            sp.check_call([hook_path_i, sys.executable], shell=True)
+            process = sp.Popen([hook_path_i, sys.executable], shell=True,
+                               stdin=sp.PIPE)
+            # Emulate return key press in case plugin uses
+            # "Press <enter> key to continue..." prompt.
+            process.communicate(input='\r\n')
+            if process.returncode != 0:
+                raise RuntimeError('Process return code == {}'
+                                   .format(process.returncode))
             return hook_path_i
-        except:
-            raise RuntimeError('Error running: {}'.format(hook_path_i))
+        except Exception, exception:
+            raise RuntimeError('Error running: {}\n{}'.format(hook_path_i,
+                                                              exception))
         finally:
             os.chdir(current_directory)
