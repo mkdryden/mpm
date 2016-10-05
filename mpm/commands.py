@@ -10,6 +10,7 @@ Inspired by `pip`.
     mpm freeze
 '''
 import cStringIO as StringIO
+import logging
 import os
 import tempfile as tmp
 
@@ -20,14 +21,14 @@ import pip_helpers
 import progressbar
 import requests
 import tarfile
-import warnings
 import yaml
 
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_INDEX_HOST = r'http://microfluidics.utoronto.ca/update'
 SERVER_URL_TEMPLATE = r'%s/plugins/{}/json/'
 DEFAULT_SERVER_URL = SERVER_URL_TEMPLATE % DEFAULT_INDEX_HOST
-
 
 def home_dir():
     '''
@@ -45,42 +46,79 @@ def home_dir():
 
 def get_plugins_directory(config_path=None, microdrop_user_root=None):
     '''
+    Resolve plugins directory.
+
+    Plugins directory is resolved as follows, highest-priority first:
+
+     1. ``plugins`` directory specified in provided :data:`config_path`.
+     2. ``plugins`` sub-directory of specified MicroDrop profile path (i.e.,
+        :data:`microdrop_user_root`)
+     3. ``plugins`` sub-directory of parent directory of configuration file
+        path specified using ``MICRODROP_CONFIG`` environment variable.
+     4. ``plugins`` sub-directory of MicroDrop profile path specified using
+        ``MICRODROP_PROFILE`` environment variable.
+     5. Plugins directory specified in
+        ``<home directory>/Microdrop/microdrop.ini``.
+     6. Plugins directory in default profile location, i.e.,
+        ``<home directory>/Microdrop/plugins``.
+
     Parameters
     ----------
-    config_path : str
-        Configuration file path (i.e., path to ``microdrop.ini``). If ``None``,
-        ``<home directory>/Microdrop/microdrop.ini`` is used.
-    microdrop_user_root : str
-        Path to Microdrop user data directory. If ``None``,
-        ``<home directory>/Microdrop`` is used.
+    config_path : str, optional
+        Configuration file path (i.e., path to ``microdrop.ini``).
+    microdrop_user_root : str, optional
+        Path to Microdrop user data directory.
 
     Returns
     -------
     path
-        Absolute path to plugins directory.  If plugins directory setting
-        cannot be resolved from a configuration file, the default plugins
-        directory will be used: ``<home directory>/Microdrop/plugins``.
+        Absolute path to plugins directory.
     '''
-    # # Find plugins directory path #
-    if microdrop_user_root is None:
-        microdrop_user_root = path(home_dir()).joinpath('Microdrop')
-    else:
-        microdrop_user_root = path(microdrop_user_root).expand()
+    RESOLVED_BY_NONE = 'default'
+    RESOLVED_BY_CONFIG_ARG = 'config_path argument'
+    RESOLVED_BY_PROFILE_ARG = 'microdrop_user_root argument'
+    RESOLVED_BY_CONFIG_ENV = 'MICRODROP_CONFIG environment variable'
+    RESOLVED_BY_PROFILE_ENV = 'MICRODROP_PROFILE environment variable'
 
-    if config_path is None:
-        config_path = microdrop_user_root.joinpath('microdrop.ini')
+    resolved_by = [RESOLVED_BY_NONE]
+
+    # # Find plugins directory path #
+    if microdrop_user_root is not None:
+        microdrop_user_root = path(microdrop_user_root).realpath()
+        resolved_by.append(RESOLVED_BY_PROFILE_ARG)
+    elif 'MICRODROP_PROFILE' in os.environ:
+        microdrop_user_root = path(os.environ['MICRODROP_PROFILE']).realpath()
+        resolved_by.append(RESOLVED_BY_PROFILE_ENV)
     else:
+        microdrop_user_root = path(home_dir()).joinpath('Microdrop')
+
+    if config_path is not None:
         config_path = path(config_path).expand()
+        resolved_by.append(RESOLVED_BY_CONFIG_ARG)
+    elif 'MICRODROP_CONFIG' in os.environ:
+        config_path = path(os.environ['MICRODROP_CONFIG']).realpath()
+        resolved_by.append(RESOLVED_BY_CONFIG_ENV)
+    else:
+        config_path = microdrop_user_root.joinpath('microdrop.ini')
 
     try:
+        # Look up plugins directory stored in configuration file.
         plugins_directory = path(configobj.ConfigObj(config_path)
                                  ['plugins']['directory'])
         if not plugins_directory.isabs():
+            # Plugins directory stored in configuration file as relative path.
+            # Interpret as relative to parent directory of configuration file.
             plugins_directory = config_path.parent.joinpath(plugins_directory)
     except Exception, why:
+        # Error looking up plugins directory in configuration file (maybe no
+        # plugins directory was listed in configuration file?).
         plugins_directory = microdrop_user_root.joinpath('plugins')
-        warnings.warn('%s.  Using default plugins directory: %s' %
-                      (why, plugins_directory))
+        logger.warning('%s.  Using default plugins directory: %s', why,
+                       plugins_directory)
+        if resolved_by[-1] in (RESOLVED_BY_CONFIG_ARG, RESOLVED_BY_CONFIG_ENV):
+            resolved_by.pop()
+    logger.info('Resolved plugins directory by %s: %s', resolved_by[-1],
+                plugins_directory)
     return plugins_directory
 
 
