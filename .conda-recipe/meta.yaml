@@ -1,0 +1,41 @@
+# source will be downloaded prior to filling in jinja templates
+# Example assumes that this folder has setup.py in it
+source:
+  git_url: ../
+
+package:
+  name: microdrop-plugin-manager
+{% if GIT_DESCRIBE_NUMBER > '0' %}
+  version: {{ GIT_DESCRIBE_TAG[1:] }}.post{{ GIT_DESCRIBE_NUMBER }}
+{% else %}
+  version: {{ GIT_DESCRIBE_TAG[1:] }}
+{% endif %}
+
+build:
+  entry_points:
+    - mpm = mpm.bin:main
+
+  # If this is a new build for the same version, increment the build
+  # number. If you do not include this key, it defaults to 0.
+  number: 0
+
+requirements:
+  build:
+    - python 2.7*
+    - configobj
+    - path_helpers
+    - paver
+    - pip-helpers
+    - progressbar2
+    - pywin32
+    - pyyaml
+    - si-prefix
+
+  run:
+    - configobj
+    - path_helpers
+    - pip-helpers
+    - progressbar2
+    - pywin32
+    - pyyaml
+    - si-prefix
