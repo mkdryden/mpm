@@ -109,6 +109,9 @@ def get_plugins_directory(config_path=None, microdrop_user_root=None):
             # Plugins directory stored in configuration file as relative path.
             # Interpret as relative to parent directory of configuration file.
             plugins_directory = config_path.parent.joinpath(plugins_directory)
+        if not plugins_directory.isdir():
+            raise IOError('Plugins directory does not exist: {}'
+                          .format(plugins_directory))
     except Exception, why:
         # Error looking up plugins directory in configuration file (maybe no
         # plugins directory was listed in configuration file?).
