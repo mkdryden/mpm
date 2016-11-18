@@ -24,7 +24,7 @@ LOG_PARSER = ArgumentParser(add_help=False)
 LOG_PARSER.add_argument('-l', '--log-level', default='error',
                         choices=['error', 'debug', 'info'])
 CONFIG_PARSER_ARGS = (('-c', '--config-file'),
-                      dict(type=path, help='Microdrop config file '
+                      dict(type=path, help='MicroDrop config file '
                            '(default="{default}").'
                            .format(default=default_config_path)))
 CONFIG_PARSER = ArgumentParser(add_help=False)
@@ -32,7 +32,7 @@ CONFIG_PARSER.add_argument(*CONFIG_PARSER_ARGS[0], **CONFIG_PARSER_ARGS[1])
 
 SERVER_PARSER = ArgumentParser(add_help=False)
 SERVER_PARSER.add_argument('-s', '--server-url',
-                            default=DEFAULT_INDEX_HOST, help='Microdrop '
+                            default=DEFAULT_INDEX_HOST, help='MicroDrop '
                             'plugin index URL (default="%(default)s")')
 PLUGINS_PARSER = ArgumentParser(add_help=False)
 PLUGINS_PARSER.add_argument('plugin', nargs='+')
@@ -41,7 +41,7 @@ PLUGINS_DIR_PARSER = ArgumentParser(add_help=False)
 mutex_path = PLUGINS_DIR_PARSER.add_mutually_exclusive_group()
 mutex_path.add_argument(*CONFIG_PARSER_ARGS[0], **CONFIG_PARSER_ARGS[1])
 mutex_path.add_argument('-d', '--plugins-directory', type=path,
-                        help='Microdrop plugins directory '
+                        help='MicroDrop plugins directory '
                         '(default="{default}").'
                         .format(default=default_plugins_directory))
 
@@ -79,7 +79,7 @@ def parse_args(args=None):
     if args is None:
         args = sys.argv
 
-    parser = ArgumentParser(description='Microdrop plugin manager',
+    parser = ArgumentParser(description='MicroDrop plugin manager',
                             parents=[MPM_PARSER])
 
     return parser.parse_args()
@@ -112,7 +112,7 @@ def validate_args(args):
                                   'must be specified.')
             raise SystemExit(-2)
     if hasattr(args, 'server_url'):
-        logger.debug('Using Microdrop index server: "%s"', args.server_url)
+        logger.debug('Using MicroDrop index server: "%s"', args.server_url)
         args.server_url = SERVER_URL_TEMPLATE % args.server_url
     if all([args.plugins_directory is None,
             args.config_file is None]):

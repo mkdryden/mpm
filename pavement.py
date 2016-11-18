@@ -18,7 +18,7 @@ if platform.system() == 'Windows':
 
 setup(name='microdrop-plugin-manager',
       version=version.getVersion(),
-      description='Microdrop plugin manager.',
+      description='MicroDrop plugin manager.',
       keywords='',
       author='Christian Fobel',
       author_email='christian@fobel.net',

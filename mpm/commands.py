@@ -58,16 +58,16 @@ def get_plugins_directory(config_path=None, microdrop_user_root=None):
      4. ``plugins`` sub-directory of MicroDrop profile path specified using
         ``MICRODROP_PROFILE`` environment variable.
      5. Plugins directory specified in
-        ``<home directory>/Microdrop/microdrop.ini``.
+        ``<home directory>/MicroDrop/microdrop.ini``.
      6. Plugins directory in default profile location, i.e.,
-        ``<home directory>/Microdrop/plugins``.
+        ``<home directory>/MicroDrop/plugins``.
 
     Parameters
     ----------
     config_path : str, optional
         Configuration file path (i.e., path to ``microdrop.ini``).
     microdrop_user_root : str, optional
-        Path to Microdrop user data directory.
+        Path to MicroDrop user data directory.
 
     Returns
     -------
@@ -90,7 +90,7 @@ def get_plugins_directory(config_path=None, microdrop_user_root=None):
         microdrop_user_root = path(os.environ['MICRODROP_PROFILE']).realpath()
         resolved_by.append(RESOLVED_BY_PROFILE_ENV)
     else:
-        microdrop_user_root = path(home_dir()).joinpath('Microdrop')
+        microdrop_user_root = path(home_dir()).joinpath('MicroDrop')
 
     if config_path is not None:
         config_path = path(config_path).expand()
@@ -141,14 +141,14 @@ def install(plugin_package, plugins_directory, server_url=DEFAULT_SERVER_URL):
     Parameters
     ----------
     plugin_package : str
-        Name of plugin package hosted on Microdrop plugin index. Version
+        Name of plugin package hosted on MicroDrop plugin index. Version
         constraints are also supported (e.g., ``"foo", "foo==1.0",
         "foo>=1.0"``, etc.)  See `version specifiers`_ reference for more
         details.
     plugins_directory : str
-        Path to Microdrop user plugins directory.
+        Path to MicroDrop user plugins directory.
     server_url : str
-        URL of JSON request for Microdrop plugins package index.  See
+        URL of JSON request for MicroDrop plugins package index.  See
         ``DEFAULT_SERVER_URL`` for default.
 
     Returns
@@ -239,7 +239,7 @@ def extract_metadata(fileobj):
     Parameters
     ----------
     fileobj : file-like
-        Microdrop plugin archive file object.
+        MicroDrop plugin archive file object.
 
     Returns
     -------
@@ -266,7 +266,7 @@ def install_fileobj(fileobj, plugin_path):
     Parameters
     ----------
     fileobj : file-like
-        Microdrop plugin file object to extract and install.
+        MicroDrop plugin file object to extract and install.
     plugin_path : path
         Target plugin install directory path.
 
@@ -297,9 +297,9 @@ def uninstall(plugin_package, plugins_directory):
     Parameters
     ----------
     plugin_package : str
-        Name of plugin package hosted on Microdrop plugin index.
+        Name of plugin package hosted on MicroDrop plugin index.
     plugins_directory : str
-        Path to Microdrop user plugins directory.
+        Path to MicroDrop user plugins directory.
     '''
     # Check existing version (if any).
     plugin_path = plugins_directory.joinpath(plugin_package)
@@ -331,7 +331,7 @@ def freeze(plugins_directory):
     Parameters
     ----------
     plugins_directory : str
-        Path to Microdrop user plugins directory.
+        Path to MicroDrop user plugins directory.
 
     Returns
     -------
@@ -358,12 +358,12 @@ def search(plugin_package, server_url=DEFAULT_SERVER_URL):
     Parameters
     ----------
     plugin_package : str
-        Name of plugin package hosted on Microdrop plugin index. Version
+        Name of plugin package hosted on MicroDrop plugin index. Version
         constraints are also supported (e.g., ``"foo", "foo==1.0",
         "foo>=1.0"``, etc.)  See `version specifiers`_ reference for more
         details.
     server_url : str
-        URL of JSON request for Microdrop plugins package index.  See
+        URL of JSON request for MicroDrop plugins package index.  See
         ``DEFAULT_SERVER_URL`` for default.
 
     Returns

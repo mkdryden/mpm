@@ -68,7 +68,7 @@ def parse_args(args=None):
     if args is None:
         args = sys.argv
 
-    parser = argparse.ArgumentParser(description='Microdrop plugin '
+    parser = argparse.ArgumentParser(description='MicroDrop plugin '
                                      'dependencies installer',
                                      parents=[INSTALL_REQUIREMENTS_PARSER])
 
