@@ -272,3 +272,50 @@ def rollback(*args, **kwargs):
     install_log_js = ch.conda_exec(*conda_args, verbose=False)
     install_log = json.loads(install_log_js.split('\x00')[-1])
     return rollback_revision, install_log
+
+
+#      * [x] Uninstall plugin package(s) from selected Conda channels
+#          - Remove broken links in `<conda prefix>/etc/microdrop/plugins/enabled/`
+def uninstall(plugin_name, *args):
+    '''
+    Uninstall plugin packages.
+
+    Plugin packages must have a directory with the same name as the package in
+    the following directory:
+
+        <conda prefix>/etc/microdrop/plugins/available/
+
+    Parameters
+    ----------
+    plugin_name : str or list
+        Plugin package(s) to uninstall.
+    *args
+        Extra arguments to pass to Conda ``uninstall`` command.
+
+    Returns
+    -------
+    dict
+        Conda uninstallation log object (from JSON Conda uninstall output).
+    '''
+    if isinstance(plugin_name, types.StringTypes):
+        plugin_name = [plugin_name]
+
+    available_path = MICRODROP_CONDA_PLUGINS.joinpath('available')
+    for name_i in plugin_name:
+        plugin_path_i = available_path.joinpath(name_i)
+        if platform.system() == 'Windows':
+            if plugin_path_i.isjunction():
+                continue
+        elif plugin_path_i.islink():
+            continue
+        elif not plugin_path_i.isdir():
+            raise IOError('Plugin `{}` not found in `{}`'
+                          .format(name_i, available_path))
+
+    # Perform uninstall operation.
+    conda_args = ['uninstall', '--json', '-y'] + list(args) + plugin_name
+    uninstall_log_js = ch.conda_exec(*conda_args, verbose=False)
+    # Remove broken links in `<conda prefix>/etc/microdrop/plugins/enabled/`,
+    # since uninstall may have made one or more packages unavailable.
+    _remove_broken_links()
+    return json.loads(uninstall_log_js.split('\x00')[-1])
