@@ -319,3 +319,93 @@ def uninstall(plugin_name, *args):
     # since uninstall may have made one or more packages unavailable.
     _remove_broken_links()
     return json.loads(uninstall_log_js.split('\x00')[-1])
+
+
+#      * [x] Enable/disable installed plugin package(s)
+def enable_plugin(plugin_name):
+    '''
+    Enable installed plugin package(s).
+
+    Each plugin package must have a directory with the same name as the package
+    in the following directory:
+
+        <conda prefix>/etc/microdrop/plugins/available/
+
+    Parameters
+    ----------
+    plugin_name : str or list
+        Plugin package(s) to enable.
+
+    Raises
+    ------
+    IOError
+        If plugin is not installed to ``<conda prefix>/etc/microdrop/plugins/available/``.
+    '''
+    if isinstance(plugin_name, types.StringTypes):
+        plugin_name = [plugin_name]
+
+    available_path = MICRODROP_CONDA_PLUGINS.joinpath('available')
+    for name_i in plugin_name:
+        plugin_path_i = available_path.joinpath(name_i)
+        if platform.system() == 'Windows':
+            if plugin_path_i.isjunction():
+                continue
+        elif plugin_path_i.islink():
+            continue
+        elif not plugin_path_i.isdir():
+            raise IOError('Plugin `{}` not found in `{}`'
+                          .format(name_i, available_path))
+
+    # All specified plugins are available.
+
+    # Link all specified plugins in
+    # `<conda prefix>/etc/microdrop/plugins/enabled/` (if not already linked).
+    enabled_path = MICRODROP_CONDA_PLUGINS.joinpath('enabled')
+    enabled_path.makedirs_p()
+    for name_i in plugin_name:
+        plugin_path_i = available_path.joinpath(name_i)
+        plugin_link_path_i = enabled_path.joinpath(name_i)
+        if not plugin_link_path_i.exists():
+            if platform.system() == 'Windows':
+                plugin_path_i.junction(plugin_link_path_i)
+            else:
+                plugin_path_i.symlink(plugin_link_path_i)
+
+
+def disable_plugin(plugin_name):
+    '''
+    Disable plugin package(s).
+
+    Parameters
+    ----------
+    plugin_name : str or list
+        Plugin package(s) to disable.
+
+    Raises
+    ------
+    IOError
+        If plugin is not enabled.
+    '''
+    if isinstance(plugin_name, types.StringTypes):
+        plugin_name = [plugin_name]
+
+    # Verify all specified plugins are currently enabled.
+    enabled_path = MICRODROP_CONDA_PLUGINS.joinpath('enabled')
+    for name_i in plugin_name:
+        plugin_path_i = enabled_path.joinpath(name_i)
+        if platform.system() == 'Windows':
+            if plugin_path_i.isjunction():
+                continue
+        elif plugin_path_i.islink():
+            continue
+        elif not plugin_path_i.isdir():
+            raise IOError('Plugin `{}` not found in `{}`'
+                          .format(name_i, enabled_path))
+
+    # All specified plugins are enabled.
+
+    # Remove all specified plugins from
+    # `<conda prefix>/etc/microdrop/plugins/enabled/`.
+    for name_i in plugin_name:
+        plugin_link_path_i = enabled_path.joinpath(name_i)
+        plugin_link_path_i.rm_rf()
