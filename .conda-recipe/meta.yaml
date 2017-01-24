@@ -39,3 +39,9 @@ requirements:
     - pywin32  # [win]
     - pyyaml
     - si-prefix
+
+test:
+  imports:
+    - mpm.api
+    - mpm.commands
+    - mpm.hooks
