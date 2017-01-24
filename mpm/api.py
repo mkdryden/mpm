@@ -3,18 +3,44 @@
 See https://github.com/wheeler-microfluidics/microdrop/issues/216
 '''
 import itertools as it
+import logging
 import json
 import platform
 import re
 import types
 
 import conda_helpers as ch
+import path_helpers as ph
+
+
+logger = logging.getLogger(__name__)
 
 
 MICRODROP_CONDA_ETC = ch.conda_prefix().joinpath('etc', 'microdrop')
 MICRODROP_CONDA_SHARE = ch.conda_prefix().joinpath('share', 'microdrop')
 MICRODROP_CONDA_ACTIONS = MICRODROP_CONDA_ETC.joinpath('actions')
 MICRODROP_CONDA_PLUGINS = MICRODROP_CONDA_ETC.joinpath('plugins')
+
+
+def _islinklike(dir_path):
+    '''
+    Parameters
+    ----------
+    dir_path : str
+        Directory path.
+
+    Returns
+    -------
+    bool
+        ``True`` if :data:`dir_path` is a link *or* junction.
+    '''
+    dir_path = ph.path(dir_path)
+    if platform.system() == 'Windows':
+        if dir_path.isjunction():
+            return True
+    elif dir_path.islink():
+        return True
+    return False
 
 
 def _channel_args(channels=None):
@@ -300,15 +326,10 @@ def uninstall(plugin_name, *args):
     if isinstance(plugin_name, types.StringTypes):
         plugin_name = [plugin_name]
 
-    available_path = MICRODROP_CONDA_PLUGINS.joinpath('available')
+    available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
     for name_i in plugin_name:
         plugin_path_i = available_path.joinpath(name_i)
-        if platform.system() == 'Windows':
-            if plugin_path_i.isjunction():
-                continue
-        elif plugin_path_i.islink():
-            continue
-        elif not plugin_path_i.isdir():
+        if not _islinklike(plugin_path_i) and not plugin_path_i.isdir():
             raise IOError('Plugin `{}` not found in `{}`'
                           .format(name_i, available_path))
 
@@ -344,17 +365,24 @@ def enable_plugin(plugin_name):
     if isinstance(plugin_name, types.StringTypes):
         plugin_name = [plugin_name]
 
-    available_path = MICRODROP_CONDA_PLUGINS.joinpath('available')
+    # Conda-managed plugins
+    shared_available_path = MICRODROP_CONDA_SHARE.joinpath('plugins',
+                                                           'available')
+    # User-managed plugins
+    etc_available_path = MICRODROP_CONDA_ETC.joinpath('plugins', 'available')
+
+    available_paths = (etc_available_path, shared_available_path)
+    plugin_paths = []
     for name_i in plugin_name:
-        plugin_path_i = available_path.joinpath(name_i)
-        if platform.system() == 'Windows':
-            if plugin_path_i.isjunction():
-                continue
-        elif plugin_path_i.islink():
-            continue
-        elif not plugin_path_i.isdir():
-            raise IOError('Plugin `{}` not found in `{}`'
-                          .format(name_i, available_path))
+        for available_path_j in available_paths:
+            plugin_path_ij = available_path_j.joinpath(name_i)
+            if not _islinklike(plugin_path_ij) and plugin_path_ij.isdir():
+                logger.debug('Found plugin directory: `%s`', plugin_path_ij)
+                break
+        else:
+            raise IOError('Plugin `{}` not found in `{}` or `{}`'
+                          .format(name_i, *available_paths))
+        plugin_paths.append(plugin_path_ij)
 
     # All specified plugins are available.
 
@@ -362,9 +390,8 @@ def enable_plugin(plugin_name):
     # `<conda prefix>/etc/microdrop/plugins/enabled/` (if not already linked).
     enabled_path = MICRODROP_CONDA_PLUGINS.joinpath('enabled')
     enabled_path.makedirs_p()
-    for name_i in plugin_name:
-        plugin_path_i = available_path.joinpath(name_i)
-        plugin_link_path_i = enabled_path.joinpath(name_i)
+    for plugin_path_i in plugin_paths:
+        plugin_link_path_i = enabled_path.joinpath(plugin_path_i.name)
         if not plugin_link_path_i.exists():
             if platform.system() == 'Windows':
                 plugin_path_i.junction(plugin_link_path_i)
@@ -393,12 +420,7 @@ def disable_plugin(plugin_name):
     enabled_path = MICRODROP_CONDA_PLUGINS.joinpath('enabled')
     for name_i in plugin_name:
         plugin_path_i = enabled_path.joinpath(name_i)
-        if platform.system() == 'Windows':
-            if plugin_path_i.isjunction():
-                continue
-        elif plugin_path_i.islink():
-            continue
-        elif not plugin_path_i.isdir():
+        if not _islinklike(plugin_path_i) and not plugin_path_i.isdir():
             raise IOError('Plugin `{}` not found in `{}`'
                           .format(name_i, enabled_path))
 
@@ -437,13 +459,10 @@ def update(*args, **kwargs):
         This can happen, for example, if the plugin package is not available in
         any of the specified Conda channels.
     '''
-    available_path = MICRODROP_CONDA_PLUGINS.joinpath('available')
+    available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
     installed_plugins = []
     for plugin_path_i in available_path.dirs():
-        if platform.system() == 'Windows':
-            if plugin_path_i.isjunction():
-                continue
-        elif plugin_path_i.islink():
+        if _islinklike(plugin_path_i):
             continue
         installed_plugins.append(plugin_path_i.name)
     if installed_plugins:
