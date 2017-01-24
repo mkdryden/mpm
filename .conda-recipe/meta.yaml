@@ -23,19 +23,19 @@ requirements:
   build:
     - python 2.7*
     - configobj
-    - path_helpers
+    - path_helpers >=0.3.post2
     - paver
     - pip-helpers
     - progressbar2
-    - pywin32
+    - pywin32  # [win]
     - pyyaml
     - si-prefix
 
   run:
     - configobj
-    - path_helpers
+    - path_helpers >=0.3.post2
     - pip-helpers
     - progressbar2
-    - pywin32
+    - pywin32  # [win]
     - pyyaml
     - si-prefix
