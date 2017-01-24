@@ -22,6 +22,7 @@ build:
 requirements:
   build:
     - python 2.7*
+    - conda-helpers
     - configobj
     - path_helpers >=0.3.post2
     - paver
@@ -32,6 +33,7 @@ requirements:
     - si-prefix
 
   run:
+    - conda-helpers
     - configobj
     - path_helpers >=0.3.post2
     - pip-helpers
