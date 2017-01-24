@@ -25,7 +25,8 @@ def parse_args(args=None):
         prefix_dir = ph.path(os.environ['PREFIX'])
         pkg_name = os.environ['PKG_NAME']
         parsed_args.target_dir = prefix_dir.joinpath('share', 'microdrop',
-                                                     'available', pkg_name)
+                                                     'plugins', 'available',
+                                                     pkg_name)
 
     return parsed_args
 
