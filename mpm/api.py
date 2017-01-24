@@ -7,6 +7,29 @@ import json
 
 import conda_helpers as ch
 
+
+MICRODROP_CONDA_ETC = ch.conda_prefix().joinpath('etc', 'microdrop')
+MICRODROP_CONDA_SHARE = ch.conda_prefix().joinpath('share', 'microdrop')
+
+
+def _channel_args(channels=None):
+    '''
+    Parameters
+    ----------
+    channels : list, optional
+        List of Conda channels.
+
+    Returns
+    -------
+    list
+        List of arguments to pass to Conda commands to specify channels.
+
+        For example, ``['-c', 'wheeler-plugins', '-c', 'conda-forge']``.
+    '''
+    channels = channels or ['microdrop-plugins']
+    return list(it.chain(*[['-c', c] for c in channels]))
+
+
 # ## Supporting legacy MicroDrop plugins ##
 #
 # Legacy MicroDrop plugins **MAY** be made **available** by linking according
@@ -50,8 +73,7 @@ def available_packages(channels=None):
         Each *value* corresponds to a ``list`` of dictionaries, each
         corresponding to an available version of the respective package.
     '''
-    channels = channels or ['microdrop-plugins']
-    channels_args = list(it.chain(*[['-c', c] for c in channels]))
+    channels_args = _channel_args(channels)
 
     # Get dictionary of available packages
     conda_args = ['search', '--override-channels', '--json'] + channels_args
