@@ -13,6 +13,7 @@ import conda_helpers as ch
 MICRODROP_CONDA_ETC = ch.conda_prefix().joinpath('etc', 'microdrop')
 MICRODROP_CONDA_SHARE = ch.conda_prefix().joinpath('share', 'microdrop')
 MICRODROP_CONDA_ACTIONS = MICRODROP_CONDA_ETC.joinpath('actions')
+MICRODROP_CONDA_PLUGINS = MICRODROP_CONDA_ETC.joinpath('plugins')
 
 
 def _channel_args(channels=None):
@@ -64,6 +65,37 @@ def _save_action(extra_context=None):
     with action_path.open('w') as output:
         json.dump(action, output, indent=2)
     return action_path, action
+
+
+def _remove_broken_links():
+    '''
+    Remove broken links in `<conda prefix>/etc/microdrop/plugins/enabled/`.
+
+    Returns
+    -------
+    list
+        List of links removed (if any).
+    '''
+    enabled_dir = MICRODROP_CONDA_PLUGINS.joinpath('enabled')
+    if not enabled_dir.isdir():
+        return []
+
+    broken_links = []
+    for dir_i in enabled_dir.walkdirs(errors='ignore'):
+        try:
+            dir_i.listdir()
+        except WindowsError:
+            broken_links.append(dir_i)
+
+    removed_links = []
+    for link_i in broken_links:
+        try:
+            link_i.rm_rf()
+        except:
+            pass
+        else:
+            removed_links.append(link_i)
+    return removed_links
 
 
 # ## Supporting legacy MicroDrop plugins ##
