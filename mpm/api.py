@@ -409,3 +409,42 @@ def disable_plugin(plugin_name):
     for name_i in plugin_name:
         plugin_link_path_i = enabled_path.joinpath(name_i)
         plugin_link_path_i.rm_rf()
+
+
+def update(*args, **kwargs):
+    '''
+    Update all installed plugin package(s).
+
+    Each plugin package must have a directory (**NOT** a link) with the same
+    name as the package in the following directory:
+
+        <conda prefix>/etc/microdrop/plugins/available/
+
+    Parameters
+    ----------
+    *args
+        Extra arguments to pass to Conda ``install`` command.
+
+        See :func:`install`.
+    **kwargs
+        See :func:`install`.
+
+    Raises
+    ------
+    RuntimeError
+        If one or more installed plugin packages cannot be updated.
+
+        This can happen, for example, if the plugin package is not available in
+        any of the specified Conda channels.
+    '''
+    available_path = MICRODROP_CONDA_PLUGINS.joinpath('available')
+    installed_plugins = []
+    for plugin_path_i in available_path.dirs():
+        if platform.system() == 'Windows':
+            if plugin_path_i.isjunction():
+                continue
+        elif plugin_path_i.islink():
+            continue
+        installed_plugins.append(plugin_path_i.name)
+    if installed_plugins:
+        install(installed_plugins, *args, **kwargs)
