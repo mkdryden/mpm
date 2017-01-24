@@ -4,6 +4,7 @@ See https://github.com/wheeler-microfluidics/microdrop/issues/216
 '''
 import itertools as it
 import json
+import re
 import types
 
 import conda_helpers as ch
@@ -170,3 +171,69 @@ def install(plugin_name, *args, **kwargs):
         # Install command modified Conda environment.
         _save_action({'conda_args': conda_args, 'install_log': install_log})
     return install_log
+
+
+#      * [x] **Rollback** (i.e., load last revision number from latest
+#        `<conda prefix>/etc/microdrop/plugins/restore_points/r<revision>.json`
+#        and run `conda install --revision <revision number>`), see #200
+def rollback(*args, **kwargs):
+    '''
+    Restore previous revision of Conda environment according to most recent
+    action in :attr:`MICRODROP_CONDA_ACTIONS`.
+
+    Parameters
+    ----------
+    *args
+        Extra arguments to pass to Conda ``install`` roll-back command.
+    channels : list, optional
+        List of Conda channels to search.
+
+        Local channels can be specified using the ``'file://'`` prefix.
+
+        For example, on Windows, use something similar to:
+
+            'file:///C:/Users/chris/local-repo'
+
+        ..notes::
+            A local directory containing packages may be converted to a local
+            channel by running ``conda index`` within the directory.
+
+            Each local file channel must point to a directory with the name of
+            a Conda platform (e.g., ``win-32``) or to a parent directory
+            containing multiple directories, where each directory has the name
+            of a Conda platform.
+
+    Returns
+    -------
+    int, dict
+        Revision after roll back and Conda installation log object (from JSON
+        Conda install output).
+
+    See also
+    --------
+
+    `wheeler-microfluidics/microdrop#200 <https://github.com/wheeler-microfluidics/microdrop/issues/200>`
+    '''
+    channel_args = _channel_args(channels=kwargs.pop('channels', None))
+    action_files = MICRODROP_CONDA_ACTIONS.files()
+    if not action_files:
+        # No action files, return current revision.
+        revisions_js = ch.conda_exec('list', '--revisions', '--json',
+                                     verbose=False)
+        revisions = json.loads(revisions_js)
+        return revisions[-1]['rev']
+    # Get file associated with most recent action.
+    cre_rev = re.compile(r'rev(?P<rev>\d+)')
+    action_file = sorted([(int(cre_rev.match(file_i.namebase).group('rev')),
+                           file_i) for file_i in
+                          action_files if cre_rev.match(file_i.namebase)],
+                         reverse=True)[0]
+    # Do rollback (i.e., install state of previous revision).
+    with action_file.open('r') as input_:
+        action = json.load(input_)
+    rollback_revision = action['revisions'][-2]
+    conda_args = (['install', '--json'] + channel_args + list(args) +
+                  ['--revision', str(rollback_revision)])
+    install_log_js = ch.conda_exec(*conda_args, verbose=False)
+    install_log = json.loads(install_log_js.split('\x00')[-1])
+    return rollback_revision, install_log
