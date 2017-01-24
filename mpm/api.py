@@ -10,6 +10,7 @@ import conda_helpers as ch
 
 MICRODROP_CONDA_ETC = ch.conda_prefix().joinpath('etc', 'microdrop')
 MICRODROP_CONDA_SHARE = ch.conda_prefix().joinpath('share', 'microdrop')
+MICRODROP_CONDA_ACTIONS = MICRODROP_CONDA_ETC.joinpath('actions')
 
 
 def _channel_args(channels=None):
@@ -28,6 +29,39 @@ def _channel_args(channels=None):
     '''
     channels = channels or ['microdrop-plugins']
     return list(it.chain(*[['-c', c] for c in channels]))
+
+
+def _save_action(extra_context=None):
+    '''
+    Save list of revisions revisions for active Conda environment.
+
+    Parameters
+    ----------
+    extra_context : dict, optional
+        Extra content to store in stored action revision.
+
+    Returns
+    -------
+    path_helpers.path, dict
+        Path to which action was written and action object, including list of
+        revisions for active Conda environment.
+    '''
+    # Get list of revisions to Conda environment since creation.
+    revisions_js = ch.conda_exec('list', '--revisions', '--json',
+                                 verbose=False)
+    revisions = json.loads(revisions_js)
+    # Save list of revisions to `/etc/microdrop/plugins/actions/rev<rev>.json`
+    # See [wheeler-microfluidics/microdrop#200][i200].
+    #
+    # [i200]: https://github.com/wheeler-microfluidics/microdrop/issues/200
+    action = extra_context.copy() if extra_context else {}
+    action['revisions'] = revisions
+    action_path = (MICRODROP_CONDA_ACTIONS
+                   .joinpath('rev{}.json'.format(revisions[-1]['rev'])))
+    action_path.parent.makedirs_p()
+    with action_path.open('w') as output:
+        json.dump(action, output, indent=2)
+    return action_path, action
 
 
 # ## Supporting legacy MicroDrop plugins ##
