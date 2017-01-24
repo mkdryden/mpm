@@ -4,6 +4,7 @@ See https://github.com/wheeler-microfluidics/microdrop/issues/216
 '''
 import itertools as it
 import json
+import types
 
 import conda_helpers as ch
 
@@ -113,3 +114,59 @@ def available_packages(channels=None):
     conda_args = ['search', '--override-channels', '--json'] + channels_args
     pkgs_js = ch.conda_exec(*conda_args, verbose=False)
     return json.loads(pkgs_js)
+
+
+#      * [x] Install plugin package(s) from selected Conda channels
+def install(plugin_name, *args, **kwargs):
+    '''
+    Install plugin packages based on specified Conda channels.
+
+    Parameters
+    ----------
+    plugin_name : str or list
+        Plugin package(s) to install.
+
+        Version specifiers are also supported, e.g., ``package >=1.0.5``.
+    *args
+        Extra arguments to pass to Conda ``install`` command.
+    channels : list, optional
+        List of Conda channels to search.
+
+        Local channels can be specified using the ``'file://'`` prefix.
+
+        For example, on Windows, use something similar to:
+
+            'file:///C:/Users/chris/local-repo'
+
+        ..notes::
+            A local directory containing packages may be converted to a local
+            channel by running ``conda index`` within the directory.
+
+            Each local file channel must point to a directory with the name of
+            a Conda platform (e.g., ``win-32``) or to a parent directory
+            containing multiple directories, where each directory has the name
+            of a Conda platform.
+
+    Returns
+    -------
+    dict
+        Result from
+
+        Each *key* corresponds to a package name.
+
+        Each *value* corresponds to a ``list`` of dictionaries, each
+        corresponding to an available version of the respective package.
+    '''
+    channel_args = _channel_args(channels=kwargs.pop('channels', None))
+    if isinstance(plugin_name, types.StringTypes):
+        plugin_name = [plugin_name]
+
+    # Perform installation
+    conda_args = (['install', '-y', '--json'] + channel_args + list(args) +
+                  plugin_name)
+    install_log_js = ch.conda_exec(*conda_args, verbose=False)
+    install_log = json.loads(install_log_js.split('\x00')[-1])
+    if 'actions' in install_log:
+        # Install command modified Conda environment.
+        _save_action({'conda_args': conda_args, 'install_log': install_log})
+    return install_log
