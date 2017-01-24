@@ -4,6 +4,7 @@ See https://github.com/wheeler-microfluidics/microdrop/issues/216
 '''
 import itertools as it
 import json
+import platform
 import re
 import types
 
@@ -82,10 +83,12 @@ def _remove_broken_links():
 
     broken_links = []
     for dir_i in enabled_dir.walkdirs(errors='ignore'):
-        try:
-            dir_i.listdir()
-        except WindowsError:
-            broken_links.append(dir_i)
+        if platform.system() == 'Windows':
+            if dir_i.isjunction() and not dir_i.readlink().isdir():
+                # Junction/link target no longer exists.
+                broken_links.append(dir_i)
+        else:
+            raise NotImplementedError('Unsupported platform')
 
     removed_links = []
     for link_i in broken_links:
