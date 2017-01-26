@@ -1,7 +1,6 @@
 include RELEASE-VERSION
 include version.py
 include setup.py
-include paver-minilib.zip
 recursive-include mpm *
 recursive-exclude mpm *.pyc
 recursive-exclude mpm *~
