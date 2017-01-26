@@ -231,6 +231,7 @@ def install(plugin_name, *args, **kwargs):
     if 'actions' in install_log:
         # Install command modified Conda environment.
         _save_action({'conda_args': conda_args, 'install_log': install_log})
+        logger.debug('Installed plugin(s): ```%s```', install_log['actions'])
     return install_log
 
 
@@ -279,6 +280,7 @@ def rollback(*args, **kwargs):
     action_files = MICRODROP_CONDA_ACTIONS.files()
     if not action_files:
         # No action files, return current revision.
+        logger.debug('No rollback actions have been recorded.')
         revisions_js = ch.conda_exec('list', '--revisions', '--json',
                                      verbose=False)
         revisions = json.loads(revisions_js)
@@ -297,6 +299,7 @@ def rollback(*args, **kwargs):
                   ['--revision', str(rollback_revision)])
     install_log_js = ch.conda_exec(*conda_args, verbose=False)
     install_log = json.loads(install_log_js.split('\x00')[-1])
+    logger.debug('Rolled back to revision %s', rollback_revision)
     return rollback_revision, install_log
 
 
@@ -339,6 +342,7 @@ def uninstall(plugin_name, *args):
     # Remove broken links in `<conda prefix>/etc/microdrop/plugins/enabled/`,
     # since uninstall may have made one or more packages unavailable.
     _remove_broken_links()
+    logger.debug('Uninstalled plugins: ```%s```', plugin_name)
     return json.loads(uninstall_log_js.split('\x00')[-1])
 
 
@@ -397,6 +401,11 @@ def enable_plugin(plugin_name):
                 plugin_path_i.junction(plugin_link_path_i)
             else:
                 plugin_path_i.symlink(plugin_link_path_i)
+            logger.debug('Enabled plugin directory: `%s` -> `%s`',
+                         plugin_path_i, plugin_link_path_i)
+        else:
+            logger.debug('Plugin already enabled: `%s` -> `%s`', plugin_path_i,
+                         plugin_link_path_i)
 
 
 def disable_plugin(plugin_name):
@@ -431,6 +440,8 @@ def disable_plugin(plugin_name):
     for name_i in plugin_name:
         plugin_link_path_i = enabled_path.joinpath(name_i)
         plugin_link_path_i.rm_rf()
+        logger.debug('Disabled plugin `%s` (i.e., removed `%s`)',
+                     plugin_path_i, plugin_link_path_i)
 
 
 def update(*args, **kwargs):
@@ -466,4 +477,6 @@ def update(*args, **kwargs):
             continue
         installed_plugins.append(plugin_path_i.name)
     if installed_plugins:
-        install(installed_plugins, *args, **kwargs)
+        install_log = install(installed_plugins, *args, **kwargs)
+        if 'actions' in install_log:
+            logger.debug('Updated plugin(s): ```%s```', install_log['actions'])
