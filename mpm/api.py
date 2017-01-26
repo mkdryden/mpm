@@ -124,7 +124,7 @@ def _remove_broken_links():
     removed_links = []
     for link_i in broken_links:
         try:
-            link_i.rm_rf()
+            link_i.unlink()
         except:
             pass
         else:
@@ -444,7 +444,7 @@ def disable_plugin(plugin_name):
     # `<conda prefix>/etc/microdrop/plugins/enabled/`.
     for name_i in plugin_name:
         plugin_link_path_i = enabled_path.joinpath(name_i)
-        plugin_link_path_i.rm_rf()
+        plugin_link_path_i.unlink()
         logger.debug('Disabled plugin `%s` (i.e., removed `%s`)',
                      plugin_path_i, plugin_link_path_i)
 
