@@ -76,9 +76,11 @@ tag_prefix = v''')
         version = versioneer.get_version()
     finally:
         os.chdir(original_dir)
-    properties = {'package_name': target_dir.name,
-                  'plugin_name': target_dir.name,
-                  'version': version}
+    # Create properties dictionary object (cast types, e.g., `ph.path`, to
+    # strings for cleaner YAML dump).
+    properties = dict(zip(['package_name', 'plugin_name', 'version'],
+                          map(str, [target_dir.name, target_dir.name,
+                                    version])))
     with target_dir.joinpath('properties.yml').open('w') as properties_yml:
         # Dump properties to YAML-formatted file.
         # Setting `default_flow_style=False` writes each property on a separate
