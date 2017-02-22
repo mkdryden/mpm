@@ -141,12 +141,14 @@ def _remove_broken_links():
 #
 #  - [ ] Create Python API for MicroDrop plugins to:
 #      * [x] Query available plugin packages based on specified Conda channels
-def available_packages(channels=None):
+def available_packages(*args, **kwargs):
     '''
     Query available plugin packages based on specified Conda channels.
 
     Parameters
     ----------
+    *args
+        Extra arguments to pass to Conda ``search`` command.
     channels : list, optional
         List of Conda channels to search.
 
@@ -164,6 +166,8 @@ def available_packages(channels=None):
             a Conda platform (e.g., ``win-32``) or to a parent directory
             containing multiple directories, where each directory has the name
             of a Conda platform.
+    override_channels : bool, optional
+        If `True`, override default Conda channels from environment.
 
     Returns
     -------
@@ -175,10 +179,14 @@ def available_packages(channels=None):
         Each *value* corresponds to a ``list`` of dictionaries, each
         corresponding to an available version of the respective package.
     '''
+    channels = kwargs.pop('channels', None)
+    override_channels = kwargs.pop('override_channels', channels is not None)
     channels_args = _channel_args(channels)
 
     # Get dictionary of available packages
-    conda_args = ['search', '--override-channels', '--json'] + channels_args
+    conda_args = ['search', '--json'] + list(args) + channels_args
+    if override_channels:
+        conda_args.append('--override-channels')
     pkgs_js = ch.conda_exec(*conda_args, verbose=False)
     return json.loads(pkgs_js)
 
