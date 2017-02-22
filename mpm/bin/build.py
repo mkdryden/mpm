@@ -4,6 +4,8 @@ import os
 import sys
 
 import path_helpers as ph
+import versioneer
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,29 @@ def build(source_dir, target_dir):
         return [name_i for name_i in names
                 if name_i in ['bld.bat', '.conda-recipe', '.git']]
     source_dir.copytree(target_dir, ignore=ignore)
+    setup_cfg = target_dir.joinpath('setup.cfg')
+    if not setup_cfg.isfile():
+        with setup_cfg.open('w') as f_setup_cfg:
+            f_setup_cfg.write('''\
+[versioneer]
+VCS = git
+style = pep440
+versionfile_source = .
+tag_prefix = v''')
+    original_dir = ph.path(os.getcwd())
+    try:
+        os.chdir(target_dir)
+        version = versioneer.get_version()
+    finally:
+        os.chdir(original_dir)
+    properties = {'package_name': target_dir.name,
+                  'plugin_name': target_dir.name,
+                  'version': version}
+    with target_dir.joinpath('properties.yml').open('w') as properties_yml:
+        # Dump properties to YAML-formatted file.
+        # Setting `default_flow_style=False` writes each property on a separate
+        # line (cosmetic change only).
+        yaml.dump(properties, properties_yml, default_flow_style=False)
 
 
 def main(args=None):

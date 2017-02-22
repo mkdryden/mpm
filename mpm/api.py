@@ -325,7 +325,7 @@ def uninstall(plugin_name, *args):
     Plugin packages must have a directory with the same name as the package in
     the following directory:
 
-        <conda prefix>/etc/microdrop/plugins/available/
+        <conda prefix>/share/microdrop/plugins/available/
 
     Parameters
     ----------
@@ -367,7 +367,7 @@ def enable_plugin(plugin_name):
     Each plugin package must have a directory with the same name as the package
     in the following directory:
 
-        <conda prefix>/etc/microdrop/plugins/available/
+        <conda prefix>/share/microdrop/plugins/available/
 
     Parameters
     ----------
@@ -377,7 +377,7 @@ def enable_plugin(plugin_name):
     Raises
     ------
     IOError
-        If plugin is not installed to ``<conda prefix>/etc/microdrop/plugins/available/``.
+        If plugin is not installed to ``<conda prefix>/share/microdrop/plugins/available/``.
     '''
     if isinstance(plugin_name, types.StringTypes):
         plugin_name = [plugin_name]
@@ -464,7 +464,7 @@ def update(*args, **kwargs):
     Each plugin package must have a directory (**NOT** a link) with the same
     name as the package in the following directory:
 
-        <conda prefix>/etc/microdrop/plugins/available/
+        <conda prefix>/share/microdrop/plugins/available/
 
     Parameters
     ----------
