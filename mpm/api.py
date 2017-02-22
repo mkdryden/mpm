@@ -21,6 +21,11 @@ MICRODROP_CONDA_SHARE = ch.conda_prefix().joinpath('share', 'microdrop')
 MICRODROP_CONDA_ACTIONS = MICRODROP_CONDA_ETC.joinpath('actions')
 MICRODROP_CONDA_PLUGINS = MICRODROP_CONDA_ETC.joinpath('plugins')
 
+__all__ = ['available_packages', 'install', 'rollback', 'uninstall',
+           'enable_plugin', 'disable_plugin', 'update', 'MICRODROP_CONDA_ETC',
+           'MICRODROP_CONDA_SHARE', 'MICRODROP_CONDA_ACTIONS',
+           'MICRODROP_CONDA_PLUGINS']
+
 
 def _islinklike(dir_path):
     '''
