@@ -21,6 +21,11 @@ MICRODROP_CONDA_SHARE = ch.conda_prefix().joinpath('share', 'microdrop')
 MICRODROP_CONDA_ACTIONS = MICRODROP_CONDA_ETC.joinpath('actions')
 MICRODROP_CONDA_PLUGINS = MICRODROP_CONDA_ETC.joinpath('plugins')
 
+__all__ = ['available_packages', 'install', 'rollback', 'uninstall',
+           'enable_plugin', 'disable_plugin', 'update', 'MICRODROP_CONDA_ETC',
+           'MICRODROP_CONDA_SHARE', 'MICRODROP_CONDA_ACTIONS',
+           'MICRODROP_CONDA_PLUGINS']
+
 
 def _islinklike(dir_path):
     '''
@@ -119,7 +124,7 @@ def _remove_broken_links():
     removed_links = []
     for link_i in broken_links:
         try:
-            link_i.rm_rf()
+            link_i.unlink()
         except:
             pass
         else:
@@ -136,12 +141,14 @@ def _remove_broken_links():
 #
 #  - [ ] Create Python API for MicroDrop plugins to:
 #      * [x] Query available plugin packages based on specified Conda channels
-def available_packages(channels=None):
+def available_packages(*args, **kwargs):
     '''
     Query available plugin packages based on specified Conda channels.
 
     Parameters
     ----------
+    *args
+        Extra arguments to pass to Conda ``search`` command.
     channels : list, optional
         List of Conda channels to search.
 
@@ -159,6 +166,8 @@ def available_packages(channels=None):
             a Conda platform (e.g., ``win-32``) or to a parent directory
             containing multiple directories, where each directory has the name
             of a Conda platform.
+    override_channels : bool, optional
+        If `True`, override default Conda channels from environment.
 
     Returns
     -------
@@ -170,10 +179,14 @@ def available_packages(channels=None):
         Each *value* corresponds to a ``list`` of dictionaries, each
         corresponding to an available version of the respective package.
     '''
+    channels = kwargs.pop('channels', None)
+    override_channels = kwargs.pop('override_channels', channels is not None)
     channels_args = _channel_args(channels)
 
     # Get dictionary of available packages
-    conda_args = ['search', '--override-channels', '--json'] + channels_args
+    conda_args = ['search', '--json'] + list(args) + channels_args
+    if override_channels:
+        conda_args.append('--override-channels')
     pkgs_js = ch.conda_exec(*conda_args, verbose=False)
     return json.loads(pkgs_js)
 
@@ -231,6 +244,7 @@ def install(plugin_name, *args, **kwargs):
     if 'actions' in install_log:
         # Install command modified Conda environment.
         _save_action({'conda_args': conda_args, 'install_log': install_log})
+        logger.debug('Installed plugin(s): ```%s```', install_log['actions'])
     return install_log
 
 
@@ -279,6 +293,7 @@ def rollback(*args, **kwargs):
     action_files = MICRODROP_CONDA_ACTIONS.files()
     if not action_files:
         # No action files, return current revision.
+        logger.debug('No rollback actions have been recorded.')
         revisions_js = ch.conda_exec('list', '--revisions', '--json',
                                      verbose=False)
         revisions = json.loads(revisions_js)
@@ -297,6 +312,7 @@ def rollback(*args, **kwargs):
                   ['--revision', str(rollback_revision)])
     install_log_js = ch.conda_exec(*conda_args, verbose=False)
     install_log = json.loads(install_log_js.split('\x00')[-1])
+    logger.debug('Rolled back to revision %s', rollback_revision)
     return rollback_revision, install_log
 
 
@@ -339,6 +355,7 @@ def uninstall(plugin_name, *args):
     # Remove broken links in `<conda prefix>/etc/microdrop/plugins/enabled/`,
     # since uninstall may have made one or more packages unavailable.
     _remove_broken_links()
+    logger.debug('Uninstalled plugins: ```%s```', plugin_name)
     return json.loads(uninstall_log_js.split('\x00')[-1])
 
 
@@ -397,6 +414,11 @@ def enable_plugin(plugin_name):
                 plugin_path_i.junction(plugin_link_path_i)
             else:
                 plugin_path_i.symlink(plugin_link_path_i)
+            logger.debug('Enabled plugin directory: `%s` -> `%s`',
+                         plugin_path_i, plugin_link_path_i)
+        else:
+            logger.debug('Plugin already enabled: `%s` -> `%s`', plugin_path_i,
+                         plugin_link_path_i)
 
 
 def disable_plugin(plugin_name):
@@ -430,7 +452,9 @@ def disable_plugin(plugin_name):
     # `<conda prefix>/etc/microdrop/plugins/enabled/`.
     for name_i in plugin_name:
         plugin_link_path_i = enabled_path.joinpath(name_i)
-        plugin_link_path_i.rm_rf()
+        plugin_link_path_i.unlink()
+        logger.debug('Disabled plugin `%s` (i.e., removed `%s`)',
+                     plugin_path_i, plugin_link_path_i)
 
 
 def update(*args, **kwargs):
@@ -451,6 +475,20 @@ def update(*args, **kwargs):
     **kwargs
         See :func:`install`.
 
+    Returns
+    -------
+    dict
+        Conda installation log object (from JSON ``conda install`` output).
+
+    Notes
+    -----
+    Only actual plugin directories are considered when updating (i.e., **NOT**
+    directory links).
+
+    This permits, for example, linking of a plugin into the ``available``
+    plugins directory during development without risking overwriting during an
+    update.
+
     Raises
     ------
     RuntimeError
@@ -462,8 +500,13 @@ def update(*args, **kwargs):
     available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
     installed_plugins = []
     for plugin_path_i in available_path.dirs():
-        if _islinklike(plugin_path_i):
-            continue
-        installed_plugins.append(plugin_path_i.name)
+        # Only process plugin directory if it is *not a link*.
+        if not _islinklike(plugin_path_i):
+            installed_plugins.append(plugin_path_i.name)
     if installed_plugins:
-        install(installed_plugins, *args, **kwargs)
+        install_log = install(installed_plugins, *args, **kwargs)
+        if 'actions' in install_log:
+            logger.debug('Updated plugin(s): ```%s```', install_log['actions'])
+        return install_log
+    else:
+        return {}
