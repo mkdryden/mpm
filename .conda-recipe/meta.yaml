@@ -43,6 +43,7 @@ requirements:
     - pywin32  # [win]
     - pyyaml
     - si-prefix
+    - versioneer
 
 test:
   imports:
