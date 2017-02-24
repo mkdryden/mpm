@@ -462,6 +462,11 @@ def update(*args, **kwargs):
     **kwargs
         See :func:`install`.
 
+    Returns
+    -------
+    dict
+        Conda installation log object (from JSON ``conda install`` output).
+
     Raises
     ------
     RuntimeError
@@ -473,10 +478,13 @@ def update(*args, **kwargs):
     available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
     installed_plugins = []
     for plugin_path_i in available_path.dirs():
-        if _islinklike(plugin_path_i):
-            continue
-        installed_plugins.append(plugin_path_i.name)
+        # Only process plugin directory if it is *not a link*.
+        if not _islinklike(plugin_path_i):
+            installed_plugins.append(plugin_path_i.name)
     if installed_plugins:
         install_log = install(installed_plugins, *args, **kwargs)
         if 'actions' in install_log:
             logger.debug('Updated plugin(s): ```%s```', install_log['actions'])
+        return install_log
+    else:
+        return {}
