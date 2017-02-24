@@ -472,6 +472,15 @@ def update(*args, **kwargs):
     dict
         Conda installation log object (from JSON ``conda install`` output).
 
+    Notes
+    -----
+    Only actual plugin directories are considered when updating (i.e., **NOT**
+    directory links).
+
+    This permits, for example, linking of a plugin into the ``available``
+    plugins directory during development without risking overwriting during an
+    update.
+
     Raises
     ------
     RuntimeError
