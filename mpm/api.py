@@ -167,7 +167,9 @@ def available_packages(*args, **kwargs):
             containing multiple directories, where each directory has the name
             of a Conda platform.
     override_channels : bool, optional
-        If `True`, override default Conda channels from environment.
+        If ``True``, override default Conda channels from environment.
+
+        Default is ``True``.
 
     Returns
     -------
@@ -225,12 +227,7 @@ def install(plugin_name, *args, **kwargs):
     Returns
     -------
     dict
-        Result from
-
-        Each *key* corresponds to a package name.
-
-        Each *value* corresponds to a ``list`` of dictionaries, each
-        corresponding to an available version of the respective package.
+        Conda installation log object (from JSON Conda install output).
     '''
     channel_args = _channel_args(channels=kwargs.pop('channels', None))
     if isinstance(plugin_name, types.StringTypes):
