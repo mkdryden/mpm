@@ -495,6 +495,8 @@ def update(*args, **kwargs):
         any of the specified Conda channels.
     '''
     available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
+    if not available_path.isdir():
+        return {}
     installed_plugins = []
     for plugin_path_i in available_path.dirs():
         # Only process plugin directory if it is *not a link*.
