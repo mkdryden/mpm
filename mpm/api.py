@@ -182,7 +182,7 @@ def available_packages(*args, **kwargs):
         corresponding to an available version of the respective package.
     '''
     channels = kwargs.pop('channels', None)
-    override_channels = kwargs.pop('override_channels', channels is not None)
+    override_channels = kwargs.pop('override_channels', True)
     channels_args = _channel_args(channels)
 
     # Get dictionary of available packages
