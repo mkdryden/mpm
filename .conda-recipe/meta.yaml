@@ -25,7 +25,7 @@ requirements:
   build:
     - python 2.7*
     - conda-helpers
-    - configobj
+    - configobj <5.0.0  # Avoid _version.py polluting global site-packages
     - path_helpers >=0.5
     - paver
     - pip-helpers
@@ -36,7 +36,7 @@ requirements:
 
   run:
     - conda-helpers
-    - configobj
+    - configobj <5.0.0  # Avoid _version.py polluting global site-packages
     - path_helpers >=0.5
     - pip-helpers
     - progressbar2

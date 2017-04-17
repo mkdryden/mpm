@@ -65,7 +65,7 @@ def build(source_dir, target_dir):
 [versioneer]
 VCS = git
 style = pep440
-versionfile_source = _version.py
+versionfile_source = __version__.py
 tag_prefix = v''')
     original_dir = ph.path(os.getcwd())
     try:
