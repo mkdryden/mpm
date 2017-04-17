@@ -58,20 +58,9 @@ def build(source_dir, target_dir):
         return [name_i for name_i in names
                 if name_i in ['bld.bat', '.conda-recipe', '.git']]
     source_dir.copytree(target_dir, ignore=ignore)
-    setup_cfg = source_dir.joinpath('setup.cfg')
-    if not setup_cfg.isfile():
-        with setup_cfg.open('w') as f_setup_cfg:
-            f_setup_cfg.write('''\
-[versioneer]
-VCS = git
-style = pep440
-versionfile_source = __version__.py
-tag_prefix = v''')
     original_dir = ph.path(os.getcwd())
     try:
         os.chdir(source_dir)
-        sp.call('versioneer install', shell=True, stderr=sp.PIPE,
-                stdout=sp.PIPE)
         import versioneer
         version = versioneer.get_version()
     finally:
