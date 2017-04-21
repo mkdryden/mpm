@@ -53,23 +53,36 @@ def build(source_dir, target_dir):
     source_dir = ph.path(source_dir).realpath()
     target_dir = ph.path(target_dir).realpath()
     target_dir.parent.makedirs_p()
+    source_archive = source_dir.joinpath(source_dir.name + '.zip')
 
-    def ignore(src, names):
-        return [name_i for name_i in names
-                if name_i in ['bld.bat', '.conda-recipe', '.git']]
-    source_dir.copytree(target_dir, ignore=ignore)
+    # Export git archive, which substitutes version expressions in
+    # `_version.py` to reflect the state (i.e., revision and tag info) of the
+    # git repository.
+    sp.check_call(['git', 'archive', '-o', source_archive, 'HEAD'], shell=True)
+
+    # Extract exported git archive to Conda MicroDrop plugins directory.
+    sp.check_call(['7za', '-o"%s"' % target_dir, 'x', source_archive])
+
+    # Delete Conda build recipe from installed package.
+    target_dir.joinpath('.conda-recipe').rmtree()
+    # Delete Conda build recipe from installed package.
+    for p in target_dir.files('.git*'):
+        p.remove()
+
+    # Write package information to (legacy) `properties.yml` file.
     original_dir = ph.path(os.getcwd())
     try:
         os.chdir(source_dir)
-        import versioneer
-        version = versioneer.get_version()
+        import _version as v
     finally:
         os.chdir(original_dir)
+
     # Create properties dictionary object (cast types, e.g., `ph.path`, to
     # strings for cleaner YAML dump).
-    properties = dict(zip(['package_name', 'plugin_name', 'version'],
-                          map(str, [target_dir.name, target_dir.name,
-                                    version])))
+    properties = {'package_name': str(target_dir.name),
+                  'plugin_name': str(target_dir.name),
+                  'version': v.get_versions()['version'],
+                  'versioneer': v.get_versions()}
     with target_dir.joinpath('properties.yml').open('w') as properties_yml:
         # Dump properties to YAML-formatted file.
         # Setting `default_flow_style=False` writes each property on a separate
