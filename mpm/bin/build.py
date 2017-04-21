@@ -52,7 +52,7 @@ def build(source_dir, target_dir):
     '''
     source_dir = ph.path(source_dir).realpath()
     target_dir = ph.path(target_dir).realpath()
-    target_dir.parent.makedirs_p()
+    target_dir.makedirs_p()
     source_archive = source_dir.joinpath(source_dir.name + '.zip')
 
     # Export git archive, which substitutes version expressions in
