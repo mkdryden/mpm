@@ -37,6 +37,7 @@ requirements:
   run:
     - conda-helpers
     - configobj <5.0.0  # Avoid _version.py polluting global site-packages
+    - git
     - path_helpers >=0.5
     - pip-helpers
     - progressbar2
