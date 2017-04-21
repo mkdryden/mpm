@@ -61,7 +61,8 @@ def build(source_dir, target_dir):
     sp.check_call(['git', 'archive', '-o', source_archive, 'HEAD'], shell=True)
 
     # Extract exported git archive to Conda MicroDrop plugins directory.
-    sp.check_call(['7za', '-o"%s"' % target_dir, 'x', source_archive])
+    sp.check_call(['7za', '-y', '-o%s' % target_dir, 'x', source_archive],
+                  shell=True)
 
     # Delete Conda build recipe from installed package.
     target_dir.joinpath('.conda-recipe').rmtree()

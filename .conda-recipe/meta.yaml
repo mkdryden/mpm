@@ -35,7 +35,7 @@ requirements:
     - si-prefix
 
   run:
-    - 7za
+    - 7za # [win]
     - conda-helpers
     - configobj <5.0.0  # Avoid _version.py polluting global site-packages
     - git
