@@ -3,6 +3,7 @@ import logging
 import os
 import subprocess as sp
 import sys
+import zipfile
 
 import path_helpers as ph
 import yaml
@@ -35,7 +36,8 @@ def parse_args(args=None):
 
 def build(source_dir, target_dir):
     '''
-    Copy MicroDrop plugin source directory to target directory path.
+    Create a release of a MicroDrop plugin source directory in the target
+    directory path.
 
     Skip the following patterns:
 
@@ -61,8 +63,8 @@ def build(source_dir, target_dir):
     sp.check_call(['git', 'archive', '-o', source_archive, 'HEAD'], shell=True)
 
     # Extract exported git archive to Conda MicroDrop plugins directory.
-    sp.check_call(['7za', '-y', '-o%s' % target_dir, 'x', source_archive],
-                  shell=True)
+    with zipfile.ZipFile(source_archive, 'r') as zip_ref:
+        zip_ref.extractall(target_dir)
 
     # Delete Conda build recipe from installed package.
     target_dir.joinpath('.conda-recipe').rmtree()
