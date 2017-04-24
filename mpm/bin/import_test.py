@@ -16,7 +16,8 @@ def parse_args(args=None):
                                      'test')
     parser.add_argument('module_name', help='Plugin module name')
     parser.add_argument('-a', '--include-available', help='Include all '
-                        'available plugins (not just enabled ones).')
+                        'available plugins (not just enabled ones).',
+                        action='store_true')
 
     parsed_args = parser.parse_args()
 
@@ -27,7 +28,7 @@ def main(args=None):
     if args is None:
         args = parse_args()
     logger.debug('Arguments: %s', args)
-    import_plugin(args.module_name)
+    import_plugin(args.module_name, include_available=args.include_available)
 
 
 if __name__ == '__main__':
