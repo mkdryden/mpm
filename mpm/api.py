@@ -2,11 +2,13 @@
 '''
 See https://github.com/wheeler-microfluidics/microdrop/issues/216
 '''
+import importlib
 import itertools as it
 import logging
 import json
 import platform
 import re
+import sys
 import types
 
 import conda_helpers as ch
@@ -509,3 +511,38 @@ def update(*args, **kwargs):
         return install_log
     else:
         return {}
+
+
+def import_plugin(module_name, include_available=False):
+    '''
+    Import MicroDrop plugin.
+
+    Parameters
+    ----------
+    module_name : str
+        Name of MicroDrop plugin Python module.
+    include_available : bool, optional
+        If ``True``, import from all available plugins (not just **enabled**
+        ones).
+
+        By default, only the ``<conda>/etc/microdrop/plugins/enabled``
+        directory is added to the Python import paths (if necessary).
+
+        If ``True``, also add the ``<conda>/share/microdrop/plugins/available``
+        directory to the Python import paths.
+
+    Returns
+    -------
+    module
+        Imported plugin module.
+    '''
+    available_plugins_dir = MICRODROP_CONDA_SHARE.joinpath('plugins',
+                                                           'available')
+    enabled_plugins_dir = MICRODROP_CONDA_ETC.joinpath('plugins', 'enabled')
+    search_paths = [enabled_plugins_dir]
+    if include_available:
+        search_paths += [available_plugins_dir]
+    for dir_i in search_paths:
+        if dir_i not in sys.path:
+            sys.path.insert(0, dir_i)
+    return importlib.import_module(module_name)
