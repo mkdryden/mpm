@@ -26,10 +26,15 @@ def parse_args(args=None):
         parsed_args.source_dir = ph.path(os.environ['SRC_DIR'])
     if not parsed_args.target_dir:
         prefix_dir = ph.path(os.environ['PREFIX'])
-        pkg_name = os.environ['PKG_NAME']
+        # Extract module name from Conda package name.
+        #
+        # For example, the module name for a package named
+        # `microdrop.droplet_planning_plugin` would be
+        # `droplet_planning_plugin`.
+        module_name = os.environ['PKG_NAME'].split('.')[-1]
         parsed_args.target_dir = prefix_dir.joinpath('share', 'microdrop',
                                                      'plugins', 'available',
-                                                     pkg_name)
+                                                     module_name)
 
     return parsed_args
 

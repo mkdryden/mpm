@@ -346,10 +346,12 @@ def uninstall(plugin_name, *args):
 
     available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
     for name_i in plugin_name:
-        plugin_path_i = available_path.joinpath(name_i)
+        plugin_path_i = available_path.joinpath(name_i.split('.')[-1])
         if not _islinklike(plugin_path_i) and not plugin_path_i.isdir():
             raise IOError('Plugin `{}` not found in `{}`'
                           .format(name_i, available_path))
+        else:
+            logging.debug('[uninstall] Found plugin `%s`', plugin_path_i)
 
     # Perform uninstall operation.
     conda_args = ['uninstall', '--json', '-y'] + list(args) + plugin_name
