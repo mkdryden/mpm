@@ -31,7 +31,7 @@ def parse_args(args=None):
         # For example, the module name for a package named
         # `microdrop.droplet_planning_plugin` would be
         # `droplet_planning_plugin`.
-        module_name = os.environ['PKG_NAME'].split('.')[-1]
+        module_name = os.environ['PKG_NAME'].split('.')[-1].replace('-', '_')
         parsed_args.target_dir = prefix_dir.joinpath('share', 'microdrop',
                                                      'plugins', 'available',
                                                      module_name)

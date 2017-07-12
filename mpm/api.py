@@ -346,7 +346,8 @@ def uninstall(plugin_name, *args):
 
     available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
     for name_i in plugin_name:
-        plugin_path_i = available_path.joinpath(name_i.split('.')[-1])
+        plugin_module_i = name_i.split('.')[-1].replace('-', '_')
+        plugin_path_i = available_path.joinpath(plugin_module_i)
         if not _islinklike(plugin_path_i) and not plugin_path_i.isdir():
             raise IOError('Plugin `{}` not found in `{}`'
                           .format(name_i, available_path))
@@ -518,14 +519,14 @@ def update(*args, **kwargs):
         return {}
 
 
-def import_plugin(module_name, include_available=False):
+def import_plugin(package_name, include_available=False):
     '''
     Import MicroDrop plugin.
 
     Parameters
     ----------
-    module_name : str
-        Name of MicroDrop plugin Python module.
+    package_name : str
+        Name of MicroDrop plugin Conda package.
     include_available : bool, optional
         If ``True``, import from all available plugins (not just **enabled**
         ones).
@@ -550,4 +551,5 @@ def import_plugin(module_name, include_available=False):
     for dir_i in search_paths:
         if dir_i not in sys.path:
             sys.path.insert(0, dir_i)
+    module_name = package_name.split('.')[-1].replace('-', '_')
     return importlib.import_module(module_name)

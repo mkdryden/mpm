@@ -14,7 +14,7 @@ def parse_args(args=None):
 
     parser = argparse.ArgumentParser(description='MicroDrop plugin import '
                                      'test')
-    parser.add_argument('module_name', help='Plugin module name')
+    parser.add_argument('package_name', help='Plugin Conda package name')
     parser.add_argument('-a', '--include-available', help='Include all '
                         'available plugins (not just enabled ones).',
                         action='store_true')
@@ -28,7 +28,7 @@ def main(args=None):
     if args is None:
         args = parse_args()
     logger.debug('Arguments: %s', args)
-    import_plugin(args.module_name, include_available=args.include_available)
+    import_plugin(args.package_name, include_available=args.include_available)
 
 
 if __name__ == '__main__':
