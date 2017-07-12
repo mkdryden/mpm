@@ -43,6 +43,7 @@ requirements:
     - progressbar2
     - pywin32  # [win]
     - pyyaml
+    - requests
     - si-prefix
     - versioneer
 

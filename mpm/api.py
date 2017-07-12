@@ -13,6 +13,7 @@ import types
 
 import conda_helpers as ch
 import path_helpers as ph
+import requests
 
 
 logger = logging.getLogger(__name__)
@@ -152,47 +153,49 @@ def available_packages(*args, **kwargs):
     *args
         Extra arguments to pass to Conda ``search`` command.
     channels : list, optional
-        List of Conda channels to search.
+        .. warning::
+            Support for ``--override-channels`` flag in ``conda search`` is
+            broken.
 
-        Local channels can be specified using the ``'file://'`` prefix.
+            See https://github.com/conda/conda/issues/5158 for details.
+        .. versionchanged:: 0.14
+            Explicitly only look for plugins on the ``microdrop-plugins`` channel.
 
-        For example, on Windows, use something similar to:
-
-            'file:///C:/Users/chris/local-repo'
-
-        ..notes::
-            A local directory containing packages may be converted to a local
-            channel by running ``conda index`` within the directory.
-
-            Each local file channel must point to a directory with the name of
-            a Conda platform (e.g., ``win-32``) or to a parent directory
-            containing multiple directories, where each directory has the name
-            of a Conda platform.
+            This is a temporary workaround for the ``conda search`` issue (see
+            https://github.com/conda/conda/issues/5158)
     override_channels : bool, optional
-        If ``True``, override default Conda channels from environment.
+        .. warning::
+            Support for ``--override-channels`` flag in ``conda search`` is
+            broken.
 
-        Default is ``True``.
+            See https://github.com/conda/conda/issues/5158 for details.
 
     Returns
     -------
     dict
-        All available packages from channels.
+        .. versionchanged:: 0.14
+            All available packages from the ``microdrop-plugins`` channel.
+
+        .. warning::
+            The :data:`channels` argument is currently ignored until the issue
+            with ``conda search`` is resolved (see
+            https://github.com/conda/conda/issues/5158).
 
         Each *key* corresponds to a package name.
 
         Each *value* corresponds to a ``list`` of dictionaries, each
         corresponding to an available version of the respective package.
     '''
-    channels = kwargs.pop('channels', None)
-    override_channels = kwargs.pop('override_channels', True)
-    channels_args = _channel_args(channels)
+    # Fetch `microdrop-plugins` repository package list.
+    response = requests.get('https://conda.anaconda.org/microdrop-plugins/win-32/repodata.json')
+    repo_info = json.loads(response.text)
+    key_func = lambda v: v['name']
 
-    # Get dictionary of available packages
-    conda_args = ['search', '--json'] + list(args) + channels_args
-    if override_channels:
-        conda_args.append('--override-channels')
-    pkgs_js = ch.conda_exec(*conda_args, verbose=False)
-    return json.loads(pkgs_js)
+    # Group available `*.bz2` packages by package name.
+    plugin_infos = dict([(k, list(v)) for k, v in
+                         it.groupby(sorted(repo_info['packages'].values(),
+                                           key=key_func), key_func)])
+    return plugin_infos
 
 
 #      * [x] Install plugin package(s) from selected Conda channels
