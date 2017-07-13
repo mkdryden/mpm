@@ -379,6 +379,14 @@ def enable_plugin(plugin_name):
     plugin_name : str or list
         Plugin package(s) to enable.
 
+    Returns
+    -------
+    dict
+        Dictionary containing a flag for each plugin name:
+
+         - ``False`` iff the plugin was already enabled.
+         - ``True`` iff it was just enabled now.
+
     Raises
     ------
     IOError
@@ -386,6 +394,9 @@ def enable_plugin(plugin_name):
     '''
     if isinstance(plugin_name, types.StringTypes):
         plugin_name = [plugin_name]
+        singleton = True
+    else:
+        singleton = False
 
     # Conda-managed plugins
     shared_available_path = MICRODROP_CONDA_SHARE.joinpath('plugins',
@@ -412,6 +423,10 @@ def enable_plugin(plugin_name):
     # `<conda prefix>/etc/microdrop/plugins/enabled/` (if not already linked).
     enabled_path = MICRODROP_CONDA_PLUGINS.joinpath('enabled')
     enabled_path.makedirs_p()
+
+    # Set flag for each plugin: `False` iff the plugin was already enabled,
+    # `True` iff it was just enabled now.
+    enabled_now = {}
     for plugin_path_i in plugin_paths:
         plugin_link_path_i = enabled_path.joinpath(plugin_path_i.name)
         if not plugin_link_path_i.exists():
@@ -421,9 +436,12 @@ def enable_plugin(plugin_name):
                 plugin_path_i.symlink(plugin_link_path_i)
             logger.debug('Enabled plugin directory: `%s` -> `%s`',
                          plugin_path_i, plugin_link_path_i)
+            enabled_now[plugin_path_i.name] = True
         else:
             logger.debug('Plugin already enabled: `%s` -> `%s`', plugin_path_i,
                          plugin_link_path_i)
+            enabled_now[plugin_path_i.name] = False
+    return enabled_now if not singleton else singleton.values()[0]
 
 
 def disable_plugin(plugin_name):
