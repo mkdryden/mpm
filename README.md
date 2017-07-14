@@ -1,3 +1,4 @@
+![https://ci.appveyor.com/api/projects/status/github/wheeler-microfluidics/mpm?branch=master&svg=true](https://ci.appveyor.com/api/projects/status/github/wheeler-microfluidics/mpm?branch=master&svg=true)
 Microdrop plugin manager inspired by ``pip``.
 
 ------------------------------------------------------------------------
