@@ -441,7 +441,7 @@ def enable_plugin(plugin_name):
             logger.debug('Plugin already enabled: `%s` -> `%s`', plugin_path_i,
                          plugin_link_path_i)
             enabled_now[plugin_path_i.name] = False
-    return enabled_now if not singleton else singleton.values()[0]
+    return enabled_now if not singleton else enabled_now.values()[0]
 
 
 def disable_plugin(plugin_name):
