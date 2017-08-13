@@ -11,6 +11,7 @@ import re
 import sys
 import types
 
+import bz2
 import conda_helpers as ch
 import path_helpers as ph
 import requests
@@ -73,6 +74,9 @@ def _save_action(extra_context=None):
     '''
     Save list of revisions revisions for active Conda environment.
 
+    .. versionchanged:: 0.18
+        Compress action revision files using ``bz2`` to save disk space.
+
     Parameters
     ----------
     extra_context : dict, optional
@@ -95,9 +99,10 @@ def _save_action(extra_context=None):
     action = extra_context.copy() if extra_context else {}
     action['revisions'] = revisions
     action_path = (MICRODROP_CONDA_ACTIONS
-                   .joinpath('rev{}.json'.format(revisions[-1]['rev'])))
+                   .joinpath('rev{}.json.bz2'.format(revisions[-1]['rev'])))
     action_path.parent.makedirs_p()
-    with action_path.open('w') as output:
+    # Compress action file using bz2 to save disk space.
+    with bz2.BZ2File(action_path, mode='w') as output:
         json.dump(action, output, indent=2)
     return action_path, action
 
@@ -258,6 +263,9 @@ def rollback(*args, **kwargs):
     Restore previous revision of Conda environment according to most recent
     action in :attr:`MICRODROP_CONDA_ACTIONS`.
 
+    .. versionchanged:: 0.18
+        Add support for action revision files compressed using ``bz2``.
+
     Parameters
     ----------
     *args
@@ -307,8 +315,14 @@ def rollback(*args, **kwargs):
                           action_files if cre_rev.match(file_i.namebase)],
                          reverse=True)[0]
     # Do rollback (i.e., install state of previous revision).
-    with action_file.open('r') as input_:
-        action = json.load(input_)
+    if action_file.ext.lower() == '.bz2':
+        # Assume file is compressed using bz2.
+        with bz2.BZ2File(action_file, mode='r') as input_:
+            action = json.load(input_)
+    else:
+        # Assume it is raw JSON.
+        with action_file.open('r') as input_:
+            action = json.load(input_)
     rollback_revision = action['revisions'][-2]
     conda_args = (['install', '--json'] + channel_args + list(args) +
                   ['--revision', str(rollback_revision)])
