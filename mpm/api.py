@@ -2,6 +2,7 @@
 '''
 See https://github.com/wheeler-microfluidics/microdrop/issues/216
 '''
+import bz2
 import importlib
 import itertools as it
 import logging
@@ -11,10 +12,10 @@ import re
 import sys
 import types
 
-import bz2
 import conda_helpers as ch
 import path_helpers as ph
 import requests
+import yaml
 
 
 logger = logging.getLogger(__name__)
@@ -499,10 +500,11 @@ def disable_plugin(plugin_name):
 
 def update(*args, **kwargs):
     '''
-    Update all installed plugin package(s).
+    Update installed plugin package(s).
 
-    Each plugin package must have a directory (**NOT** a link) with the same
-    name as the package in the following directory:
+    Each plugin package must have a directory (**NOT** a link) containing a
+    ``properties.yml`` file with a ``package_name`` value in the following
+    directory:
 
         <conda prefix>/share/microdrop/plugins/available/
 
@@ -512,6 +514,10 @@ def update(*args, **kwargs):
         Extra arguments to pass to Conda ``install`` command.
 
         See :func:`install`.
+    package_name : str or list, optional
+        Name(s) of MicroDrop plugin Conda package(s) to update.
+
+        By default, all installed packages are updated.
     **kwargs
         See :func:`install`.
 
@@ -536,17 +542,33 @@ def update(*args, **kwargs):
 
         This can happen, for example, if the plugin package is not available in
         any of the specified Conda channels.
+
+    See also
+    --------
+    :func:`installed_plugins`
     '''
-    available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
-    if not available_path.isdir():
-        return {}
-    installed_plugins = []
-    for plugin_path_i in available_path.dirs():
-        # Only process plugin directory if it is *not a link*.
-        if not _islinklike(plugin_path_i):
-            installed_plugins.append(plugin_path_i.name)
-    if installed_plugins:
-        install_log = install(installed_plugins, *args, **kwargs)
+    package_name = kwargs.pop('package_name', None)
+
+    # Only consider **installed** plugins (see `installed_plugins()` docstring).
+    installed_plugins_ = installed_plugins()
+    if installed_plugins_:
+        plugin_packages = [plugin_i['package_name']
+                           for plugin_i in installed_plugins_]
+        if package_name is None:
+            package_name = plugin_packages
+        elif isinstance(package_name, types.StringTypes):
+            package_name = [package_name]
+        logger.info('Installing any available updates for plugins: %s',
+                    ','.join('`{}`'.format(package_name_i)
+                             for package_name_i in package_name))
+        # Attempt to install plugin packages.
+        try:
+            install_log = install(package_name, *args, **kwargs)
+        except RuntimeError, exception:
+            if 'CondaHTTPError' in str(exception):
+                raise IOError('Error accessing update server.')
+            else:
+                raise
         if 'actions' in install_log:
             logger.debug('Updated plugin(s): ```%s```', install_log['actions'])
         return install_log
@@ -588,3 +610,38 @@ def import_plugin(package_name, include_available=False):
             sys.path.insert(0, dir_i)
     module_name = package_name.split('.')[-1].replace('-', '_')
     return importlib.import_module(module_name)
+
+
+def installed_plugins():
+    '''
+    .. versionadded:: 0.20
+
+    Returns
+    -------
+    list
+        List of properties corresponding to each available plugin that is
+        **installed**.
+
+        A plugin is assumed to be *installed* if it is present in the
+        ``share/microdrop/plugins/available`` directory **and** is a **real**
+        directory (i.e., not a link).
+    '''
+    available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
+    if not available_path.isdir():
+        return []
+    installed_plugins_ = []
+    for plugin_path_i in available_path.dirs():
+        # Only process plugin directory if it is *not a link*.
+        if not _islinklike(plugin_path_i):
+            # Read plugin package info from `properties.yml` file.
+            try:
+                with plugin_path_i.joinpath('properties.yml').open('r') as input_:
+                    properties_i = yaml.load(input_.read())
+            except:
+                logger.info('[warning] Could not read package info: `%s`',
+                            plugin_path_i.joinpath('properties.yml'),
+                            exc_info=True)
+            else:
+                properties_i['path'] = plugin_path_i.realpath()
+                installed_plugins_.append(properties_i)
+    return installed_plugins_
