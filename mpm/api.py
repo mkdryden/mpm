@@ -208,6 +208,9 @@ def install(plugin_name, *args, **kwargs):
     '''
     Install plugin packages based on specified Conda channels.
 
+    .. versionchanged:: 0.19.1
+        Do not save rollback info on dry-run.
+
     Parameters
     ----------
     plugin_name : str or list
