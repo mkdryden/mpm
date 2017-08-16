@@ -29,6 +29,11 @@ def update_plugin_dialog(package_name=None, update_args=None,
 
         Add :data:`update_args` and :data:`update_kwargs` arguments.
 
+    .. versionchanged:: 0.20.1
+        Disable "OK" button until update has completed.
+
+        Add "Cancel" button.
+
     Parameters
     ----------
     package_name : str or list, optional
@@ -42,6 +47,13 @@ def update_plugin_dialog(package_name=None, update_args=None,
         Extra arguments to pass to :func:`mpm.api.update` call.
     update_kwargs : dict, optional
         Extra keyword arguments to pass to :func:`mpm.api.update` call.
+
+    Returns
+    -------
+    dict or None
+        Conda install log.
+
+        If dialog is closed or cancelled, ``None`` is returned.
 
     Notes
     -----
