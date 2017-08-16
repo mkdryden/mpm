@@ -15,6 +15,7 @@ import types
 import conda_helpers as ch
 import path_helpers as ph
 import requests
+import yaml
 
 
 logger = logging.getLogger(__name__)
@@ -588,3 +589,38 @@ def import_plugin(package_name, include_available=False):
             sys.path.insert(0, dir_i)
     module_name = package_name.split('.')[-1].replace('-', '_')
     return importlib.import_module(module_name)
+
+
+def installed_plugins():
+    '''
+    .. versionadded:: 0.20
+
+    Returns
+    -------
+    list
+        List of properties corresponding to each available plugin that is
+        **installed**.
+
+        A plugin is assumed to be *installed* if it is present in the
+        ``share/microdrop/plugins/available`` directory **and** is a **real**
+        directory (i.e., not a link).
+    '''
+    available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
+    if not available_path.isdir():
+        return []
+    installed_plugins_ = []
+    for plugin_path_i in available_path.dirs():
+        # Only process plugin directory if it is *not a link*.
+        if not _islinklike(plugin_path_i):
+            # Read plugin package info from `properties.yml` file.
+            try:
+                with plugin_path_i.joinpath('properties.yml').open('r') as input_:
+                    properties_i = yaml.load(input_.read())
+            except:
+                logger.info('[warning] Could not read package info: `%s`',
+                            plugin_path_i.joinpath('properties.yml'),
+                            exc_info=True)
+            else:
+                properties_i['path'] = plugin_path_i.realpath()
+                installed_plugins_.append(properties_i)
+    return installed_plugins_
