@@ -1,10 +1,12 @@
 import threading
+import types
 
+import conda_helpers as ch
 import gtk
 import gobject
 import logging_helpers as lh
 
-from ...update import _update_plugin
+from ...api import installed_plugins, update
 
 
 # The `update_plugin_dialog` class uses threads.  Need to initialize GTK to use
@@ -14,7 +16,7 @@ from ...update import _update_plugin
 gtk.gdk.threads_init()
 
 
-def update_plugin_dialog(package_name):
+def update_plugin_dialog(package_name=None):
     '''
     Launch dialog to track status of update of specified plugin package.
 
@@ -22,8 +24,13 @@ def update_plugin_dialog(package_name):
 
     Parameters
     ----------
-    package_name : str, optional
+    package_name : str or list, optional
         Conda MicroDrop plugin package name, e.g., `microdrop.mr-box-plugin`.
+
+        Multiple plugin package names may be provided as a list.
+
+        If no package name(s) specified, update **all installed** plugin
+        packages.
 
     Notes
     -----
@@ -31,72 +38,107 @@ def update_plugin_dialog(package_name):
     periodically, and one to run the actual update attempt.
     '''
     thread_context = {}
+
+    # Get list of installed plugins that qualify for updating.
+    installed_plugins_ = installed_plugins()
+
+    if package_name is None:
+        package_name = installed_plugins_
+    elif isinstance(package_name, types.StringTypes):
+        package_name = [package_name]
+
+    invalid_plugin_packages = set(package_name) - set(installed_plugins_)
+    if invalid_plugin_packages:
+        # Invalid plugin packages were specified for update.
+        # Sort package names for deterministic ordering.
+        invalaid_plugin_packages = sorted(invalaid_plugin_packages)
+        raise NameError('The following plugin packages are not currently '
+                        'installed: %s' %
+                        (', '.join(['`{}`'.format(package_i)
+                                    for package_i in
+                                    invalid_plugin_packages])))
+
+    # Format string list of packages.
+    package_name_list = ', '.join('`{}`'.format(name_i)
+                                  for name_i in package_name)
+
     def _update(update_complete, package_name):
         '''
         Attempt to update plugin.  Display status message when complete.
+
+        Parameters
+        ----------
+        update_complete : threading.Event
+            Set when update operation has been completed.
+        package_name : str, list, or None
+            Conda MicroDrop plugin package name(s) (default to all installed
+            plugins).
         '''
         try:
             with lh.logging_restore(clear_handlers=True):
-                update_response = _update_plugin(package_name)
+                update_response = update(package_name=package_name)
                 thread_context['update_response'] = update_response
+
             # Display prompt indicating update status.
-            if 'new_versions' in update_response:
-                #  1. Success (with previous version and new version).
+
+            # Get list of unlinked and linked packages.
+            install_info_ = install_info(update_response)
+
+            if any(install_info_):
+                # At least one package was uninstalled or installed (or
+                # "unlinked"/"linked" in Conda lingo).
                 def _status():
-                    old_packages = update_response.get('old_versions', [])
-                    new_packages = update_response.get('new_versions', [])
+                    updated_packages = []
+                    for package_name_i in package_name:
+                        if any(linked_i[0].startswith(package_name_i)
+                               for linked_i in install_info_[1]):
+                            # Plugin package was updated.
+                            updated_packages.append(packages_name)
 
-                    success_message = ('The <b>`{}`</b> plugin was updated '
-                                       'successfully.'.format(package_name))
-                    deps_only_message = ('Dependencies of the <b>`{}`</b> '
-                                         'plugin were updated successfully.'
-                                         .format(package_name))
-                    if any(package_name in package_i
-                           for package_i in new_packages):
-                        # Plugin package was updated.
-                        dialog.props.text = success_message
-                    else:
-                        # Only dependencies were updated.
-                        dialog.props.text = deps_only_message
-
-                    def _version_lines(versions):
-                        return (['<tt>'] + list(' - {}'.format(package_i)
-                                                for package_i in versions) +
+                    def _version_lines(package_info_tuples):
+                        return (['<tt>'] + list(' - {} (from {})'
+                                                .format(name_i, channel_i)
+                                                for name_i, channel_i in
+                                                package_info_tuples) +
                                 ['</tt>'])
-                    def _version_message(versions):
-                        return ('<tt>{}</tt>'
-                                .format('\n'.join(' - {}'.format(package_i)
-                                                  for package_i in
-                                                  versions)))
                     detailed_message_lines = []
-                    if old_packages:
-                        detailed_message_lines.append('From:')
-                        detailed_message_lines.extend(_version_lines(old_packages))
-                    if new_packages:
-                        detailed_message_lines.append('To:')
-                        detailed_message_lines.extend(_version_lines(new_packages))
+                    if unlinked_packages:
+                        detailed_message_lines.append('Uninstalled:')
+                        (detailed_message_lines
+                         .extend(_version_lines(install_info_[0])))
+                    if linked_packages:
+                        detailed_message_lines.append('Installed:')
+                        (detailed_message_lines
+                         .extend(_version_lines(install_info_[1])))
 
-                    if old_packages or new_packages:
-                        dialog.props.secondary_text = \
-                            '\n'.join(detailed_message_lines)
-                    dialog.props.use_markup = True
+                    dialog.props.secondary_text = \
+                        '\n'.join(detailed_message_lines)
                     dialog.props.secondary_use_markup = True
+                    dialog.props.use_markup = True
+
+                    if updated_packages:
+                        message = ('The following plugin(s) were updated '
+                                   'successfully: <b><tt>{}</tt></b>'
+                                   .format(package_name_list)
+                    else:
+                        message = ('Plugin dependencies were updated '
+                                   'successfully.')
+                    dialog.props.text = message
             else:
-                #  2. No update available.
+                # No packages were unlinked **or** linked.
                 def _status():
                     #  1. Success (with previous version and new version).
-                    dialog.props.text = ('The latest version of the <tt><b>'
-                                         '`{}` (v{})</b></tt> plugin is '
-                                         'already installed.'
-                                         .format(package_name,
-                                                 update_response['version']))
+                    dialog.props.text = ('The latest version of the following '
+                                         'plugin(s) are already installed: '
+                                         '<tt><b>`{}`'
+                                         .format(package_name_list))
                     dialog.props.use_markup = True
             gobject.idle_add(_status)
         except Exception, exception:
             # Failure updating plugin.
             def _error():
-                dialog.props.text = ('Error updating plugin <tt>{}</tt>:'
-                                     .format(package_name))
+                dialog.props.text = ('Error updating plugin(s): <tt>{}</tt>'
+                                     .format(package_name_list))
                 dialog.props.use_markup = True
                 exception_markup = gobject.markup_escape_text(str(exception))
                 exception_markup = exception_markup.replace(r'\n', '\n')
@@ -155,4 +197,5 @@ def update_plugin_dialog(package_name):
     # Show dialog.
     dialog.run()
     dialog.destroy()
+    # Return response from `conda_helpers.api.update` call.
     return thread_context['update_response']
