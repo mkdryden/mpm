@@ -248,7 +248,7 @@ def install(plugin_name, *args, **kwargs):
                   plugin_name)
     install_log_js = ch.conda_exec(*conda_args, verbose=False)
     install_log = json.loads(install_log_js.split('\x00')[-1])
-    if 'actions' in install_log:
+    if 'actions' in install_log and not install_log.get('dry_run'):
         # Install command modified Conda environment.
         _save_action({'conda_args': conda_args, 'install_log': install_log})
         logger.debug('Installed plugin(s): ```%s```', install_log['actions'])
