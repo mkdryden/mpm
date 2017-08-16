@@ -500,10 +500,11 @@ def disable_plugin(plugin_name):
 
 def update(*args, **kwargs):
     '''
-    Update all installed plugin package(s).
+    Update installed plugin package(s).
 
-    Each plugin package must have a directory (**NOT** a link) with the same
-    name as the package in the following directory:
+    Each plugin package must have a directory (**NOT** a link) containing a
+    ``properties.yml`` file with a ``package_name`` value in the following
+    directory:
 
         <conda prefix>/share/microdrop/plugins/available/
 
@@ -513,6 +514,10 @@ def update(*args, **kwargs):
         Extra arguments to pass to Conda ``install`` command.
 
         See :func:`install`.
+    package_name : str or list, optional
+        Name(s) of MicroDrop plugin Conda package(s) to update.
+
+        By default, all installed packages are updated.
     **kwargs
         See :func:`install`.
 
@@ -537,17 +542,33 @@ def update(*args, **kwargs):
 
         This can happen, for example, if the plugin package is not available in
         any of the specified Conda channels.
+
+    See also
+    --------
+    :func:`installed_plugins`
     '''
-    available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
-    if not available_path.isdir():
-        return {}
-    installed_plugins = []
-    for plugin_path_i in available_path.dirs():
-        # Only process plugin directory if it is *not a link*.
-        if not _islinklike(plugin_path_i):
-            installed_plugins.append(plugin_path_i.name)
-    if installed_plugins:
-        install_log = install(installed_plugins, *args, **kwargs)
+    package_name = kwargs.pop('package_name', None)
+
+    # Only consider **installed** plugins (see `installed_plugins()` docstring).
+    installed_plugins_ = installed_plugins()
+    if installed_plugins_:
+        plugin_packages = [plugin_i['package_name']
+                           for plugin_i in installed_plugins_]
+        if package_name is None:
+            package_name = plugin_packages
+        elif isinstance(package_name, types.StringTypes):
+            package_name = [package_name]
+        logger.info('Installing any available updates for plugins: %s',
+                    ','.join('`{}`'.format(package_name_i)
+                             for package_name_i in package_name))
+        # Attempt to install plugin packages.
+        try:
+            install_log = install(package_name, *args, **kwargs)
+        except RuntimeError, exception:
+            if 'CondaHTTPError' in str(exception):
+                raise IOError('Error accessing update server.')
+            else:
+                raise
         if 'actions' in install_log:
             logger.debug('Updated plugin(s): ```%s```', install_log['actions'])
         return install_log
