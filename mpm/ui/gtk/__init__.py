@@ -29,6 +29,11 @@ def update_plugin_dialog(package_name=None, update_args=None,
 
         Add :data:`update_args` and :data:`update_kwargs` arguments.
 
+    .. versionchanged:: 0.20.1
+        Disable "OK" button until update has completed.
+
+        Add "Cancel" button.
+
     Parameters
     ----------
     package_name : str or list, optional
@@ -42,6 +47,13 @@ def update_plugin_dialog(package_name=None, update_args=None,
         Extra arguments to pass to :func:`mpm.api.update` call.
     update_kwargs : dict, optional
         Extra keyword arguments to pass to :func:`mpm.api.update` call.
+
+    Returns
+    -------
+    dict or None
+        Conda install log.
+
+        If dialog is closed or cancelled, ``None`` is returned.
 
     Notes
     -----
@@ -183,16 +195,23 @@ def update_plugin_dialog(package_name=None, update_args=None,
         '''
         while not update_complete.wait(1. / 16):
             gobject.idle_add(progress_bar.pulse)
-        gobject.idle_add(progress_bar.set_fraction, 1.)
-        gobject.idle_add(progress_bar.hide)
+        def _on_complete():
+            progress_bar.set_fraction(1.)
+            progress_bar.hide()
+            # Enable "OK" button and focus it.
+            dialog.action_area.get_children()[1].props.sensitive = True
+            dialog.action_area.get_children()[1].grab_focus()
+        gobject.idle_add(_on_complete)
 
-    dialog = gtk.MessageDialog(buttons=gtk.BUTTONS_OK)
+    dialog = gtk.MessageDialog(buttons=gtk.BUTTONS_OK_CANCEL)
     dialog.set_position(gtk.WIN_POS_MOUSE)
     dialog.props.resizable = True
     progress_bar = gtk.ProgressBar()
     content_area = dialog.get_content_area()
     content_area.pack_start(progress_bar, True, True, 5)
     content_area.show_all()
+    # Disable "OK" button until update has completed.
+    dialog.action_area.get_children()[1].props.sensitive = False
 
     dialog.props.title = 'Update plugin'
     if len(package_name) > 1:
@@ -224,5 +243,6 @@ def update_plugin_dialog(package_name=None, update_args=None,
     # Show dialog.
     dialog.run()
     dialog.destroy()
+
     # Return response from `conda_helpers.api.update` call.
-    return thread_context['update_response']
+    return thread_context.get('update_response')
