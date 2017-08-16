@@ -16,11 +16,18 @@ from ...api import installed_plugins, update
 gtk.gdk.threads_init()
 
 
-def update_plugin_dialog(package_name=None):
+def update_plugin_dialog(package_name=None, update_args=None,
+                         update_kwargs=None):
     '''
     Launch dialog to track status of update of specified plugin package.
 
     .. versionadded:: 0.19
+
+    .. versionchanged:: 0.20
+        Add support for updating multiple packages (update all **installed**
+        plugins by default).
+
+        Add :data:`update_args` and :data:`update_kwargs` arguments.
 
     Parameters
     ----------
@@ -31,6 +38,10 @@ def update_plugin_dialog(package_name=None):
 
         If no package name(s) specified, update **all installed** plugin
         packages.
+    update_args : list or tuple, optional
+        Extra arguments to pass to :func:`mpm.api.update` call.
+    update_kwargs : dict, optional
+        Extra keyword arguments to pass to :func:`mpm.api.update` call.
 
     Notes
     -----
@@ -41,13 +52,15 @@ def update_plugin_dialog(package_name=None):
 
     # Get list of installed plugins that qualify for updating.
     installed_plugins_ = installed_plugins()
+    installed_package_names = [plugin_i['package_name']
+                               for plugin_i in installed_plugins_]
 
     if package_name is None:
-        package_name = installed_plugins_
+        package_name = installed_package_names
     elif isinstance(package_name, types.StringTypes):
         package_name = [package_name]
 
-    invalid_plugin_packages = set(package_name) - set(installed_plugins_)
+    invalid_plugin_packages = set(package_name) - set(installed_package_names)
     if invalid_plugin_packages:
         # Invalid plugin packages were specified for update.
         # Sort package names for deterministic ordering.
@@ -61,6 +74,9 @@ def update_plugin_dialog(package_name=None):
     # Format string list of packages.
     package_name_list = ', '.join('`{}`'.format(name_i)
                                   for name_i in package_name)
+    # Format multiple-lines string list of packages.
+    package_name_lines = '\n'.join(' - {}'.format(name_i)
+                                   for name_i in package_name)
 
     def _update(update_complete, package_name):
         '''
@@ -76,13 +92,17 @@ def update_plugin_dialog(package_name=None):
         '''
         try:
             with lh.logging_restore(clear_handlers=True):
-                update_response = update(package_name=package_name)
+                args = update_args or []
+                kwargs = update_kwargs or {}
+                kwargs['package_name'] = package_name
+                # Pass extra args and kwargs to `.api.update` (if specified).
+                update_response = update(*args, **kwargs)
                 thread_context['update_response'] = update_response
 
             # Display prompt indicating update status.
 
             # Get list of unlinked and linked packages.
-            install_info_ = install_info(update_response)
+            install_info_ = ch.install_info(update_response)
 
             if any(install_info_):
                 # At least one package was uninstalled or installed (or
@@ -93,7 +113,7 @@ def update_plugin_dialog(package_name=None):
                         if any(linked_i[0].startswith(package_name_i)
                                for linked_i in install_info_[1]):
                             # Plugin package was updated.
-                            updated_packages.append(packages_name)
+                            updated_packages.append(package_name_i)
 
                     def _version_lines(package_info_tuples):
                         return (['<tt>'] + list(' - {} (from {})'
@@ -102,12 +122,12 @@ def update_plugin_dialog(package_name=None):
                                                 package_info_tuples) +
                                 ['</tt>'])
                     detailed_message_lines = []
-                    if unlinked_packages:
-                        detailed_message_lines.append('Uninstalled:')
+                    if install_info_[0]:
+                        detailed_message_lines.append('<b>Uninstalled:</b>')
                         (detailed_message_lines
                          .extend(_version_lines(install_info_[0])))
-                    if linked_packages:
-                        detailed_message_lines.append('Installed:')
+                    if install_info_[1]:
+                        detailed_message_lines.append('<b>Installed:</b>')
                         (detailed_message_lines
                          .extend(_version_lines(install_info_[1])))
 
@@ -118,8 +138,8 @@ def update_plugin_dialog(package_name=None):
 
                     if updated_packages:
                         message = ('The following plugin(s) were updated '
-                                   'successfully: <b><tt>{}</tt></b>'
-                                   .format(package_name_list)
+                                   'successfully:\n<b><tt>{}</tt></b>'
+                                   .format(package_name_lines))
                     else:
                         message = ('Plugin dependencies were updated '
                                    'successfully.')
@@ -137,8 +157,8 @@ def update_plugin_dialog(package_name=None):
         except Exception, exception:
             # Failure updating plugin.
             def _error():
-                dialog.props.text = ('Error updating plugin(s): <tt>{}</tt>'
-                                     .format(package_name_list))
+                dialog.props.text = ('Error updating plugin(s):\n<tt>{}</tt>'
+                                     .format(package_name_lines))
                 dialog.props.use_markup = True
                 exception_markup = gobject.markup_escape_text(str(exception))
                 exception_markup = exception_markup.replace(r'\n', '\n')
@@ -173,9 +193,16 @@ def update_plugin_dialog(package_name=None):
     content_area = dialog.get_content_area()
     content_area.pack_start(progress_bar, True, True, 5)
     content_area.show_all()
+
     dialog.props.title = 'Update plugin'
-    dialog.props.text = ('Searching for update for <tt>{}</tt>...'
-                         .format(package_name))
+    if len(package_name) > 1:
+        # Multiple packages were specified.
+        dialog.props.text = ('Searching for updates for:\n<tt>{}</tt>'
+                             .format(package_name_lines))
+    else:
+        # A single package was specified.
+        dialog.props.text = ('Searching for updates for <tt>{}</tt>...'
+                             .format(package_name[0]))
     dialog.props.use_markup = True
 
     # Event to keep progress bar pulsing while waiting for update to
