@@ -2,6 +2,7 @@
 '''
 See https://github.com/wheeler-microfluidics/microdrop/issues/216
 '''
+import bz2
 import importlib
 import itertools as it
 import logging
@@ -11,7 +12,6 @@ import re
 import sys
 import types
 
-import bz2
 import conda_helpers as ch
 import path_helpers as ph
 import requests
