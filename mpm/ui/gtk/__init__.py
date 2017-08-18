@@ -1,3 +1,4 @@
+import logging
 import threading
 import types
 
@@ -8,6 +9,7 @@ import logging_helpers as lh
 
 from ...api import installed_plugins, update
 
+logger = logging.getLogger(__name__)
 
 # The `update_plugin_dialog` class uses threads.  Need to initialize GTK to use
 # threads. See [here][1] for more information.
@@ -17,7 +19,7 @@ gtk.gdk.threads_init()
 
 
 def update_plugin_dialog(package_name=None, update_args=None,
-                         update_kwargs=None):
+                         update_kwargs=None, ignore_not_installed=True):
     '''
     Launch dialog to track status of update of specified plugin package.
 
@@ -38,6 +40,9 @@ def update_plugin_dialog(package_name=None, update_args=None,
         Fix typo in handling of attempt to update plugin packages that are not
         installed.
 
+    .. versionchanged:: 0.23
+        Add :data:`ignore_not_installed` parameter.
+
     Parameters
     ----------
     package_name : str or list, optional
@@ -51,6 +56,12 @@ def update_plugin_dialog(package_name=None, update_args=None,
         Extra arguments to pass to :func:`mpm.api.update` call.
     update_kwargs : dict, optional
         Extra keyword arguments to pass to :func:`mpm.api.update` call.
+    ignore_not_installed : bool, optional
+        If ``True`` (*default*), ignore plugin packages that are not installed
+        as Conda packages.
+
+        Otherwise, a :class:`conda_heplers.PackageNotFound` exception will be
+        raised for plugins that are not installed as Conda packages.
 
     Returns
     -------
@@ -66,26 +77,36 @@ def update_plugin_dialog(package_name=None, update_args=None,
     '''
     thread_context = {}
 
-    # Get list of installed plugins that qualify for updating.
-    installed_plugins_ = installed_plugins()
-    installed_package_names = [plugin_i['package_name']
-                               for plugin_i in installed_plugins_]
-
     if package_name is None:
+        # No plugin package specified.  Update all plugins which are installed
+        # as Conda packages.
+        installed_plugins_ = installed_plugins(only_conda=True)
+        installed_package_names = [plugin_i['package_name']
+                                   for plugin_i in installed_plugins_]
         package_name = installed_package_names
-    elif isinstance(package_name, types.StringTypes):
-        package_name = [package_name]
+        logger.info('Update all plugins installed as Conda packages.')
+    else:
+        # At least one plugin package name was explicitly specified.
+        if isinstance(package_name, types.StringTypes):
+            package_name = [package_name]
 
-    invalid_plugin_packages = set(package_name) - set(installed_package_names)
-    if invalid_plugin_packages:
-        # Invalid plugin packages were specified for update.
-        # Sort package names for deterministic ordering.
-        invalid_plugin_packages = sorted(invalid_plugin_packages)
-        raise NameError('The following plugin packages are not currently '
-                        'installed: %s' %
-                        (', '.join(['`{}`'.format(package_i)
-                                    for package_i in
-                                    invalid_plugin_packages])))
+        # Only update plugins that are installed as Conda packages.
+        try:
+            conda_package_infos = ch.package_version(package_name, verbose=False)
+        except ch.PackageNotFound, exception:
+            # At least one specified plugin package name did not correspond to an
+            # installed Conda package.
+            if not ignore_not_installed:
+                # Raise error indicating at least one plugin is not installed
+                # as a Conda package.
+                raise
+            logger.warning(str(exception))
+            conda_package_infos = exception.available
+        # Extract name from each Conda plugin package.
+        package_name = [package_i['name'] for package_i in conda_package_infos]
+        logger.info('Update the following plugins: %s',
+                    ', '.join('`{}`'.format(name_i)
+                              for name_i in package_name))
 
     # Format string list of packages.
     package_name_list = ', '.join('`{}`'.format(name_i)
