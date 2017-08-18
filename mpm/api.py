@@ -645,3 +645,81 @@ def installed_plugins():
                 properties_i['path'] = plugin_path_i.realpath()
                 installed_plugins_.append(properties_i)
     return installed_plugins_
+
+
+def enabled_plugins(installed_only=True):
+    '''
+    .. versionadded:: 0.21
+
+    Parameters
+    ----------
+    installed_only : bool, optional
+        Only consider enabled plugins that are installed in the Conda
+        environment.
+
+    Returns
+    -------
+    list
+        List of properties corresponding to each plugin that is **enabled**.
+
+        If :data:`installed_only` is True``, only consider plugins:
+
+         1. Present in the ``etc/microdrop/plugins/enabled`` directory as a
+            link/junction to a **real** directory (i.e., not a link) in the
+            ``share/microdrop/plugins/available`` directory.
+         2. Matching the name of a package in the Conda environment.
+
+        If :data:`installed_only` is ``False``, consider all plugins present in
+        the ``etc/microdrop/plugins/enabled`` directory as either a *real*
+        directory or a link/junction.
+
+    '''
+    enabled_path = MICRODROP_CONDA_PLUGINS.joinpath('enabled')
+    if not enabled_path.isdir():
+        return []
+
+    # Construct list of property dictionaries, one per enabled plugin
+    # directory.
+    enabled_plugins_ = []
+    for plugin_path_i in enabled_path.dirs():
+        if not installed_only or _islinklike(plugin_path_i):
+            # Enabled plugin path is either **a link to an installed plugin**
+            # or call explicitly specifies that plugins that are not installed
+            # should still be considered.
+
+            # Read plugin package info from `properties.yml` file.
+            try:
+                with plugin_path_i.joinpath('properties.yml').open('r') as input_:
+                    properties_i = yaml.load(input_.read())
+            except:
+                logger.info('[warning] Could not read package info: `%s`',
+                            plugin_path_i.joinpath('properties.yml'),
+                            exc_info=True)
+                continue
+            else:
+                properties_i['path'] = plugin_path_i.realpath()
+                enabled_plugins_.append(properties_i)
+
+    if installed_only:
+        # Only consider enabled plugins that are installed in the Conda
+        # environment.
+        try:
+            # Attempt to look up installed Conda package info for each enabled
+            # plugin.
+            package_names = [properties_i['package_name']
+                             for properties_i in enabled_plugins_]
+            installed_info = ch.package_version(package_names, verbose=False)
+        except ch.PackageNotFound, exception:
+            # Failed to find a corresponding installed Conda package for at
+            # least one enabled plugin.
+            logger.warning(str(exception))
+            available_names = set([package_i['name']
+                                   for package_i in exception.available])
+            # Only return list of enabled plugins that have a corresponding
+            # Conda package installed.
+            return [properties_i for properties_i in enabled_plugins_
+                    if properties_i['package_name'] in available_names]
+
+    # Return list of all enabled plugins, regardless of whether or not they
+    # have corresponding Conda packages installed.
+    return enabled_plugins_
