@@ -34,6 +34,10 @@ def update_plugin_dialog(package_name=None, update_args=None,
 
         Add "Cancel" button.
 
+    .. versionchanged:: 0.20.3
+        Fix typo in handling of attempt to update plugin packages that are not
+        installed.
+
     Parameters
     ----------
     package_name : str or list, optional
