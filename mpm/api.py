@@ -550,7 +550,7 @@ def update(*args, **kwargs):
     package_name = kwargs.pop('package_name', None)
 
     # Only consider **installed** plugins (see `installed_plugins()` docstring).
-    installed_plugins_ = installed_plugins()
+    installed_plugins_ = installed_plugins(only_conda=True)
     if installed_plugins_:
         plugin_packages = [plugin_i['package_name']
                            for plugin_i in installed_plugins_]
@@ -612,9 +612,16 @@ def import_plugin(package_name, include_available=False):
     return importlib.import_module(module_name)
 
 
-def installed_plugins():
+def installed_plugins(only_conda=False):
     '''
     .. versionadded:: 0.20
+
+    Parameters
+    ----------
+    only_conda : bool, optional
+        Only consider plugins that are installed **as Conda packages**.
+
+        .. versionadded:: 0.22
 
     Returns
     -------
@@ -622,9 +629,15 @@ def installed_plugins():
         List of properties corresponding to each available plugin that is
         **installed**.
 
-        A plugin is assumed to be *installed* if it is present in the
-        ``share/microdrop/plugins/available`` directory **and** is a **real**
-        directory (i.e., not a link).
+        .. versionchanged:: 0.22
+
+            If :data:`only_conda` is ``False``, a plugin is assumed to be
+            *installed* if it is present in the
+            ``share/microdrop/plugins/available`` directory **and** is a
+            **real** directory (i.e., not a link).
+
+            If :data:`only_conda` is ``True``, only properties for plugins that
+            are installed **as Conda packages** are returned.
     '''
     available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
     if not available_path.isdir():
@@ -644,7 +657,27 @@ def installed_plugins():
             else:
                 properties_i['path'] = plugin_path_i.realpath()
                 installed_plugins_.append(properties_i)
-    return installed_plugins_
+
+    if only_conda:
+        # Only consider plugins that are installed **as Conda packages**.
+        try:
+            package_names = [plugin_i['package_name']
+                             for plugin_i in installed_plugins_]
+            conda_package_infos = ch.package_version(package_names,
+                                                     verbose=False)
+        except ch.PackageNotFound, exception:
+            # At least one specified plugin package name did not correspond to an
+            # installed Conda package.
+            logger.warning(str(exception))
+            conda_package_infos = exception.available
+        # Extract name from each Conda plugin package.
+        installed_package_names = set([package_i['name']
+                                       for package_i in conda_package_infos])
+        return [plugin_i for plugin_i in installed_plugins_
+                if plugin_i['package_name'] in installed_package_names]
+    else:
+        # Return all available plugins.
+        return installed_plugins_
 
 
 def enabled_plugins(installed_only=True):
