@@ -76,7 +76,7 @@ def update_plugin_dialog(package_name=None, update_args=None,
     if invalid_plugin_packages:
         # Invalid plugin packages were specified for update.
         # Sort package names for deterministic ordering.
-        invalaid_plugin_packages = sorted(invalaid_plugin_packages)
+        invalid_plugin_packages = sorted(invalid_plugin_packages)
         raise NameError('The following plugin packages are not currently '
                         'installed: %s' %
                         (', '.join(['`{}`'.format(package_i)
