@@ -26,6 +26,7 @@ MICRODROP_CONDA_SHARE = ch.conda_prefix().joinpath('share', 'microdrop')
 MICRODROP_CONDA_ACTIONS = MICRODROP_CONDA_ETC.joinpath('actions')
 MICRODROP_CONDA_PLUGINS = MICRODROP_CONDA_ETC.joinpath('plugins')
 
+
 __all__ = ['available_packages', 'install', 'rollback', 'uninstall',
            'enable_plugin', 'disable_plugin', 'update', 'MICRODROP_CONDA_ETC',
            'MICRODROP_CONDA_SHARE', 'MICRODROP_CONDA_ACTIONS',
@@ -51,24 +52,6 @@ def _islinklike(dir_path):
     elif dir_path.islink():
         return True
     return False
-
-
-def _channel_args(channels=None):
-    '''
-    Parameters
-    ----------
-    channels : list, optional
-        List of Conda channels.
-
-    Returns
-    -------
-    list
-        List of arguments to pass to Conda commands to specify channels.
-
-        For example, ``['-c', 'wheeler-plugins', '-c', 'conda-forge']``.
-    '''
-    channels = channels or ['microdrop-plugins']
-    return list(it.chain(*[['-c', c] for c in channels]))
 
 
 def _save_action(extra_context=None):
@@ -217,6 +200,12 @@ def install(plugin_name, *args, **kwargs):
     .. versionchanged:: 0.19.1
         Do not save rollback info on dry-run.
 
+    .. versionchanged:: 0.24
+        Remove channels argument.  Use Conda channels as configured in Conda
+        environment.
+
+        Note that channels can still be explicitly set through :data:`*args`.
+
     Parameters
     ----------
     plugin_name : str or list
@@ -225,36 +214,17 @@ def install(plugin_name, *args, **kwargs):
         Version specifiers are also supported, e.g., ``package >=1.0.5``.
     *args
         Extra arguments to pass to Conda ``install`` command.
-    channels : list, optional
-        List of Conda channels to search.
-
-        Local channels can be specified using the ``'file://'`` prefix.
-
-        For example, on Windows, use something similar to:
-
-            'file:///C:/Users/chris/local-repo'
-
-        ..notes::
-            A local directory containing packages may be converted to a local
-            channel by running ``conda index`` within the directory.
-
-            Each local file channel must point to a directory with the name of
-            a Conda platform (e.g., ``win-32``) or to a parent directory
-            containing multiple directories, where each directory has the name
-            of a Conda platform.
 
     Returns
     -------
     dict
         Conda installation log object (from JSON Conda install output).
     '''
-    channel_args = _channel_args(channels=kwargs.pop('channels', None))
     if isinstance(plugin_name, types.StringTypes):
         plugin_name = [plugin_name]
 
     # Perform installation
-    conda_args = (['install', '-y', '--json'] + channel_args + list(args) +
-                  plugin_name)
+    conda_args = (['install', '-y', '--json'] + list(args) + plugin_name)
     install_log_js = ch.conda_exec(*conda_args, verbose=False)
     install_log = json.loads(install_log_js.split('\x00')[-1])
     if 'actions' in install_log and not install_log.get('dry_run'):
@@ -275,27 +245,16 @@ def rollback(*args, **kwargs):
     .. versionchanged:: 0.18
         Add support for action revision files compressed using ``bz2``.
 
+    .. versionchanged:: 0.24
+        Remove channels argument.  Use Conda channels as configured in Conda
+        environment.
+
+        Note that channels can still be explicitly set through :data:`*args`.
+
     Parameters
     ----------
     *args
         Extra arguments to pass to Conda ``install`` roll-back command.
-    channels : list, optional
-        List of Conda channels to search.
-
-        Local channels can be specified using the ``'file://'`` prefix.
-
-        For example, on Windows, use something similar to:
-
-            'file:///C:/Users/chris/local-repo'
-
-        ..notes::
-            A local directory containing packages may be converted to a local
-            channel by running ``conda index`` within the directory.
-
-            Each local file channel must point to a directory with the name of
-            a Conda platform (e.g., ``win-32``) or to a parent directory
-            containing multiple directories, where each directory has the name
-            of a Conda platform.
 
     Returns
     -------
@@ -308,7 +267,6 @@ def rollback(*args, **kwargs):
 
     `wheeler-microfluidics/microdrop#200 <https://github.com/wheeler-microfluidics/microdrop/issues/200>`
     '''
-    channel_args = _channel_args(channels=kwargs.pop('channels', None))
     action_files = MICRODROP_CONDA_ACTIONS.files()
     if not action_files:
         # No action files, return current revision.
@@ -333,7 +291,7 @@ def rollback(*args, **kwargs):
         with action_file.open('r') as input_:
             action = json.load(input_)
     rollback_revision = action['revisions'][-2]
-    conda_args = (['install', '--json'] + channel_args + list(args) +
+    conda_args = (['install', '--json'] + list(args) +
                   ['--revision', str(rollback_revision)])
     install_log_js = ch.conda_exec(*conda_args, verbose=False)
     install_log = json.loads(install_log_js.split('\x00')[-1])
