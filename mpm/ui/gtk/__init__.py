@@ -43,6 +43,10 @@ def update_plugin_dialog(package_name=None, update_args=None,
     .. versionchanged:: 0.23
         Add :data:`ignore_not_installed` parameter.
 
+    .. versionchanged:: 0.23.1
+        Fix bug in status message markup syntax when no packages are unlinked
+        **or** linked.
+
     Parameters
     ----------
     package_name : str or list, optional
