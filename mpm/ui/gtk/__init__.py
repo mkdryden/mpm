@@ -187,7 +187,7 @@ def update_plugin_dialog(package_name=None, update_args=None,
                     #  1. Success (with previous version and new version).
                     dialog.props.text = ('The latest version of the following '
                                          'plugin(s) are already installed: '
-                                         '<tt><b>`{}`'
+                                         '<tt><b>`{}`</b></tt>'
                                          .format(package_name_list))
                     dialog.props.use_markup = True
             gobject.idle_add(_status)
