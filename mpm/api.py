@@ -26,6 +26,7 @@ MICRODROP_CONDA_SHARE = ch.conda_prefix().joinpath('share', 'microdrop')
 MICRODROP_CONDA_ACTIONS = MICRODROP_CONDA_ETC.joinpath('actions')
 MICRODROP_CONDA_PLUGINS = MICRODROP_CONDA_ETC.joinpath('plugins')
 
+
 __all__ = ['available_packages', 'install', 'rollback', 'uninstall',
            'enable_plugin', 'disable_plugin', 'update', 'MICRODROP_CONDA_ETC',
            'MICRODROP_CONDA_SHARE', 'MICRODROP_CONDA_ACTIONS',
@@ -51,24 +52,6 @@ def _islinklike(dir_path):
     elif dir_path.islink():
         return True
     return False
-
-
-def _channel_args(channels=None):
-    '''
-    Parameters
-    ----------
-    channels : list, optional
-        List of Conda channels.
-
-    Returns
-    -------
-    list
-        List of arguments to pass to Conda commands to specify channels.
-
-        For example, ``['-c', 'wheeler-plugins', '-c', 'conda-forge']``.
-    '''
-    channels = channels or ['microdrop-plugins']
-    return list(it.chain(*[['-c', c] for c in channels]))
 
 
 def _save_action(extra_context=None):
@@ -158,50 +141,55 @@ def available_packages(*args, **kwargs):
     ----------
     *args
         Extra arguments to pass to Conda ``search`` command.
-    channels : list, optional
-        .. warning::
-            Support for ``--override-channels`` flag in ``conda search`` is
-            broken.
-
-            See https://github.com/conda/conda/issues/5158 for details.
-        .. versionchanged:: 0.14
-            Explicitly only look for plugins on the ``microdrop-plugins`` channel.
-
-            This is a temporary workaround for the ``conda search`` issue (see
-            https://github.com/conda/conda/issues/5158)
-    override_channels : bool, optional
-        .. warning::
-            Support for ``--override-channels`` flag in ``conda search`` is
-            broken.
-
-            See https://github.com/conda/conda/issues/5158 for details.
 
     Returns
     -------
     dict
-        .. versionchanged:: 0.14
-            All available packages from the ``microdrop-plugins`` channel.
-
-        .. warning::
-            The :data:`channels` argument is currently ignored until the issue
-            with ``conda search`` is resolved (see
-            https://github.com/conda/conda/issues/5158).
+        .. versionchanged:: 0.24
+            All Conda packages beginning with ``microdrop.`` prefix from all
+            configured channels.
 
         Each *key* corresponds to a package name.
 
         Each *value* corresponds to a ``list`` of dictionaries, each
         corresponding to an available version of the respective package.
-    '''
-    # Fetch `microdrop-plugins` repository package list.
-    response = requests.get('https://conda.anaconda.org/microdrop-plugins/win-32/repodata.json')
-    repo_info = json.loads(response.text)
-    key_func = lambda v: v['name']
 
-    # Group available `*.bz2` packages by package name.
-    plugin_infos = dict([(k, list(v)) for k, v in
-                         it.groupby(sorted(repo_info['packages'].values(),
-                                           key=key_func), key_func)])
-    return plugin_infos
+        For example:
+
+            {
+              "microdrop.dmf-device-ui-plugin": [
+                ...
+                {
+                  ...
+                  "build_number": 0,
+                  "channel": "microdrop-plugins",
+                  "installed": true,
+                  "license": "BSD",
+                  "name": "microdrop.dmf-device-ui-plugin",
+                  "size": 62973,
+                  "version": "2.1.post2",
+                  ...
+                },
+                ...],
+                ...
+            }
+    '''
+    # Get list of available MicroDrop plugins, i.e., Conda packages that start
+    # with the prefix `microdrop.`.
+    try:
+        plugin_packages_info_json = ch.conda_exec('search', '--json',
+                                                  '^microdrop\.', verbose=False)
+        return json.loads(plugin_packages_info_json)
+    except RuntimeError, exception:
+        if 'CondaHTTPError' in str(exception):
+            logger.warning('Could not connect to Conda server.')
+        else:
+            logger.warning('Error querying available MicroDrop plugins.',
+                           exc_info=True)
+    except Exception, exception:
+        logger.warning('Error querying available MicroDrop plugins.',
+                       exc_info=True)
+    return {}
 
 
 #      * [x] Install plugin package(s) from selected Conda channels
@@ -212,6 +200,12 @@ def install(plugin_name, *args, **kwargs):
     .. versionchanged:: 0.19.1
         Do not save rollback info on dry-run.
 
+    .. versionchanged:: 0.24
+        Remove channels argument.  Use Conda channels as configured in Conda
+        environment.
+
+        Note that channels can still be explicitly set through :data:`*args`.
+
     Parameters
     ----------
     plugin_name : str or list
@@ -220,36 +214,17 @@ def install(plugin_name, *args, **kwargs):
         Version specifiers are also supported, e.g., ``package >=1.0.5``.
     *args
         Extra arguments to pass to Conda ``install`` command.
-    channels : list, optional
-        List of Conda channels to search.
-
-        Local channels can be specified using the ``'file://'`` prefix.
-
-        For example, on Windows, use something similar to:
-
-            'file:///C:/Users/chris/local-repo'
-
-        ..notes::
-            A local directory containing packages may be converted to a local
-            channel by running ``conda index`` within the directory.
-
-            Each local file channel must point to a directory with the name of
-            a Conda platform (e.g., ``win-32``) or to a parent directory
-            containing multiple directories, where each directory has the name
-            of a Conda platform.
 
     Returns
     -------
     dict
         Conda installation log object (from JSON Conda install output).
     '''
-    channel_args = _channel_args(channels=kwargs.pop('channels', None))
     if isinstance(plugin_name, types.StringTypes):
         plugin_name = [plugin_name]
 
     # Perform installation
-    conda_args = (['install', '-y', '--json'] + channel_args + list(args) +
-                  plugin_name)
+    conda_args = (['install', '-y', '--json'] + list(args) + plugin_name)
     install_log_js = ch.conda_exec(*conda_args, verbose=False)
     install_log = json.loads(install_log_js.split('\x00')[-1])
     if 'actions' in install_log and not install_log.get('dry_run'):
@@ -270,27 +245,16 @@ def rollback(*args, **kwargs):
     .. versionchanged:: 0.18
         Add support for action revision files compressed using ``bz2``.
 
+    .. versionchanged:: 0.24
+        Remove channels argument.  Use Conda channels as configured in Conda
+        environment.
+
+        Note that channels can still be explicitly set through :data:`*args`.
+
     Parameters
     ----------
     *args
         Extra arguments to pass to Conda ``install`` roll-back command.
-    channels : list, optional
-        List of Conda channels to search.
-
-        Local channels can be specified using the ``'file://'`` prefix.
-
-        For example, on Windows, use something similar to:
-
-            'file:///C:/Users/chris/local-repo'
-
-        ..notes::
-            A local directory containing packages may be converted to a local
-            channel by running ``conda index`` within the directory.
-
-            Each local file channel must point to a directory with the name of
-            a Conda platform (e.g., ``win-32``) or to a parent directory
-            containing multiple directories, where each directory has the name
-            of a Conda platform.
 
     Returns
     -------
@@ -303,7 +267,6 @@ def rollback(*args, **kwargs):
 
     `wheeler-microfluidics/microdrop#200 <https://github.com/wheeler-microfluidics/microdrop/issues/200>`
     '''
-    channel_args = _channel_args(channels=kwargs.pop('channels', None))
     action_files = MICRODROP_CONDA_ACTIONS.files()
     if not action_files:
         # No action files, return current revision.
@@ -328,7 +291,7 @@ def rollback(*args, **kwargs):
         with action_file.open('r') as input_:
             action = json.load(input_)
     rollback_revision = action['revisions'][-2]
-    conda_args = (['install', '--json'] + channel_args + list(args) +
+    conda_args = (['install', '--json'] + list(args) +
                   ['--revision', str(rollback_revision)])
     install_log_js = ch.conda_exec(*conda_args, verbose=False)
     install_log = json.loads(install_log_js.split('\x00')[-1])
