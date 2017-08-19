@@ -158,50 +158,55 @@ def available_packages(*args, **kwargs):
     ----------
     *args
         Extra arguments to pass to Conda ``search`` command.
-    channels : list, optional
-        .. warning::
-            Support for ``--override-channels`` flag in ``conda search`` is
-            broken.
-
-            See https://github.com/conda/conda/issues/5158 for details.
-        .. versionchanged:: 0.14
-            Explicitly only look for plugins on the ``microdrop-plugins`` channel.
-
-            This is a temporary workaround for the ``conda search`` issue (see
-            https://github.com/conda/conda/issues/5158)
-    override_channels : bool, optional
-        .. warning::
-            Support for ``--override-channels`` flag in ``conda search`` is
-            broken.
-
-            See https://github.com/conda/conda/issues/5158 for details.
 
     Returns
     -------
     dict
-        .. versionchanged:: 0.14
-            All available packages from the ``microdrop-plugins`` channel.
-
-        .. warning::
-            The :data:`channels` argument is currently ignored until the issue
-            with ``conda search`` is resolved (see
-            https://github.com/conda/conda/issues/5158).
+        .. versionchanged:: 0.24
+            All Conda packages beginning with ``microdrop.`` prefix from all
+            configured channels.
 
         Each *key* corresponds to a package name.
 
         Each *value* corresponds to a ``list`` of dictionaries, each
         corresponding to an available version of the respective package.
-    '''
-    # Fetch `microdrop-plugins` repository package list.
-    response = requests.get('https://conda.anaconda.org/microdrop-plugins/win-32/repodata.json')
-    repo_info = json.loads(response.text)
-    key_func = lambda v: v['name']
 
-    # Group available `*.bz2` packages by package name.
-    plugin_infos = dict([(k, list(v)) for k, v in
-                         it.groupby(sorted(repo_info['packages'].values(),
-                                           key=key_func), key_func)])
-    return plugin_infos
+        For example:
+
+            {
+              "microdrop.dmf-device-ui-plugin": [
+                ...
+                {
+                  ...
+                  "build_number": 0,
+                  "channel": "microdrop-plugins",
+                  "installed": true,
+                  "license": "BSD",
+                  "name": "microdrop.dmf-device-ui-plugin",
+                  "size": 62973,
+                  "version": "2.1.post2",
+                  ...
+                },
+                ...],
+                ...
+            }
+    '''
+    # Get list of available MicroDrop plugins, i.e., Conda packages that start
+    # with the prefix `microdrop.`.
+    try:
+        plugin_packages_info_json = ch.conda_exec('search', '--json',
+                                                  '^microdrop\.', verbose=False)
+        return json.loads(plugin_packages_info_json)
+    except RuntimeError, exception:
+        if 'CondaHTTPError' in str(exception):
+            logger.warning('Could not connect to Conda server.')
+        else:
+            logger.warning('Error querying available MicroDrop plugins.',
+                           exc_info=True)
+    except Exception, exception:
+        logger.warning('Error querying available MicroDrop plugins.',
+                       exc_info=True)
+    return {}
 
 
 #      * [x] Install plugin package(s) from selected Conda channels
