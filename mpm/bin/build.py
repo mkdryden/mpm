@@ -21,6 +21,7 @@ def parse_args(args=None):
     parser.add_argument('-s', '--source-dir', type=ph.path, nargs='?')
     parser.add_argument('-t', '--target-dir', type=ph.path, nargs='?')
     parser.add_argument('-p', '--package-name', nargs='?')
+    parser.add_argument('-v', '--versionNumber', nargs='?')
 
     parsed_args = parser.parse_args()
     if not parsed_args.source_dir:
@@ -38,11 +39,13 @@ def parse_args(args=None):
                                                      module_name)
     if not parsed_args.package_name:
         parsed_args.package_name = os.environ['PKG_NAME']
+    if not parsed_args.versionNumber:
+        parsed_args.versionNumber = None
 
     return parsed_args
 
 
-def build(source_dir, target_dir, package_name=None):
+def build(source_dir, target_dir, package_name=None, versionNumber=None):
     '''
     Create a release of a MicroDrop plugin source directory in the target
     directory path.
@@ -92,16 +95,24 @@ def build(source_dir, target_dir, package_name=None):
     original_dir = ph.path(os.getcwd())
     try:
         os.chdir(source_dir)
-        import _version as v
+        if versionNumber is None:
+            import _version as v
     finally:
         os.chdir(original_dir)
 
     # Create properties dictionary object (cast types, e.g., `ph.path`, to
     # strings for cleaner YAML dump).
-    properties = {'package_name': package_name,
-                  'plugin_name': str(target_dir.name),
-                  'version': v.get_versions()['version'],
-                  'versioneer': v.get_versions()}
+    if versionNumber is None:
+        properties = {'package_name': package_name,
+                      'plugin_name': str(target_dir.name),
+                      'version': v.get_versions()['version'],
+                      'versioneer': v.get_versions()}
+    else:
+        properties = {'package_name': package_name,
+                      'plugin_name': str(target_dir.name),
+                      'version': versionNumber,
+                      'versioneer': "?"}
+
     with target_dir.joinpath('properties.yml').open('w') as properties_yml:
         # Dump properties to YAML-formatted file.
         # Setting `default_flow_style=False` writes each property on a separate
@@ -113,7 +124,8 @@ def main(args=None):
     if args is None:
         args = parse_args()
     logger.debug('Arguments: %s', args)
-    build(args.source_dir, args.target_dir, package_name=args.package_name)
+    build(args.source_dir, args.target_dir, package_name=args.package_name,
+          versionNumber=args.versionNumber)
 
 
 if __name__ == '__main__':
