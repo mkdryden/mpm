@@ -76,7 +76,13 @@ def build(source_dir, target_dir, package_name=None):
     # Export git archive, which substitutes version expressions in
     # `_version.py` to reflect the state (i.e., revision and tag info) of the
     # git repository.
-    sp.check_call(['git', 'archive', '-o', source_archive, 'HEAD'], shell=True)
+    original_dir = ph.path(os.getcwd())
+    try:
+        os.chdir(source_dir)
+        sp.check_call(['git', 'archive', '-o', source_archive, 'HEAD'],
+                      shell=True)
+    finally:
+        os.chdir(original_dir)
 
     # Extract exported git archive to Conda MicroDrop plugins directory.
     with zipfile.ZipFile(source_archive, 'r') as zip_ref:
