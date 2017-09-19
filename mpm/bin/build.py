@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def parse_args(args=None):
     '''Parses arguments, returns ``(options, args)``.'''
     if args is None:
-        args = sys.argv
+        args = sys.argv[1:]
 
     parser = argparse.ArgumentParser(description='MicroDrop plugin '
                                      'Conda recipe builder')
