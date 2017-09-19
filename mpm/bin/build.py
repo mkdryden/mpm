@@ -21,7 +21,10 @@ def parse_args(args=None):
     parser.add_argument('-s', '--source-dir', type=ph.path, nargs='?')
     parser.add_argument('-t', '--target-dir', type=ph.path, nargs='?')
     parser.add_argument('-p', '--package-name', nargs='?')
-    parser.add_argument('-v', '--versionNumber', nargs='?')
+    # Use `-V` for version (from [common Unix flags][1]).
+    #
+    # [1]: https://unix.stackexchange.com/a/108141/187716
+    parser.add_argument('-V', '--version-number', nargs='?')
 
     parsed_args = parser.parse_args()
     if not parsed_args.source_dir:
@@ -39,13 +42,11 @@ def parse_args(args=None):
                                                      module_name)
     if not parsed_args.package_name:
         parsed_args.package_name = os.environ['PKG_NAME']
-    if not parsed_args.versionNumber:
-        parsed_args.versionNumber = None
 
     return parsed_args
 
 
-def build(source_dir, target_dir, package_name=None, versionNumber=None):
+def build(source_dir, target_dir, package_name=None, version_number=None):
     '''
     Create a release of a MicroDrop plugin source directory in the target
     directory path.
@@ -95,23 +96,23 @@ def build(source_dir, target_dir, package_name=None, versionNumber=None):
     original_dir = ph.path(os.getcwd())
     try:
         os.chdir(source_dir)
-        if versionNumber is None:
+        if version_number is None:
+            # Assume versioneer is being used for managing version.
             import _version as v
+
+            version_info = {'version': v.get_versions()['version'],
+                            'versioneer': v.get_versions()}
+        else:
+            # Version number was specified explicitly.
+            version_info = {'version': version_number}
     finally:
         os.chdir(original_dir)
 
     # Create properties dictionary object (cast types, e.g., `ph.path`, to
     # strings for cleaner YAML dump).
-    if versionNumber is None:
-        properties = {'package_name': package_name,
-                      'plugin_name': str(target_dir.name),
-                      'version': v.get_versions()['version'],
-                      'versioneer': v.get_versions()}
-    else:
-        properties = {'package_name': package_name,
-                      'plugin_name': str(target_dir.name),
-                      'version': versionNumber,
-                      'versioneer': "?"}
+    properties = {'package_name': package_name,
+                  'plugin_name': str(target_dir.name)}
+    properties.update(version_info)
 
     with target_dir.joinpath('properties.yml').open('w') as properties_yml:
         # Dump properties to YAML-formatted file.
@@ -125,7 +126,7 @@ def main(args=None):
         args = parse_args()
     logger.debug('Arguments: %s', args)
     build(args.source_dir, args.target_dir, package_name=args.package_name,
-          versionNumber=args.versionNumber)
+          version_number=args.version_number)
 
 
 if __name__ == '__main__':
