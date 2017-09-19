@@ -87,6 +87,8 @@ def build(source_dir, target_dir, package_name=None):
     # Extract exported git archive to Conda MicroDrop plugins directory.
     with zipfile.ZipFile(source_archive, 'r') as zip_ref:
         zip_ref.extractall(target_dir)
+    # Extraction is complete.  Remove temporary archive.
+    source_archive.remove()
 
     # Delete Conda build recipe from installed package.
     target_dir.joinpath('.conda-recipe').rmtree()
