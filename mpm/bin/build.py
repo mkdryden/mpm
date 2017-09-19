@@ -12,7 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args(args=None):
-    '''Parses arguments, returns ``(options, args)``.'''
+    '''
+    Parses arguments, returns ``(options, args)``.
+
+    .. versionchanged:: 0.24.1
+        Fix handling of optional :data:`args`.
+    '''
     if args is None:
         args = sys.argv[1:]
 
@@ -52,6 +57,11 @@ def build(source_dir, target_dir, package_name=None):
      - ``bld.bat``
      - ``.conda-recipe/*``
      - ``.git/*``
+
+    .. versionchanged:: 0.24.1
+        Remove temporary archive after extraction.
+
+        Change directory into source directory before running ``git archive``.
 
     Parameters
     ----------
