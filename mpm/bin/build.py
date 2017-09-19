@@ -26,6 +26,10 @@ def parse_args(args=None):
     parser.add_argument('-s', '--source-dir', type=ph.path, nargs='?')
     parser.add_argument('-t', '--target-dir', type=ph.path, nargs='?')
     parser.add_argument('-p', '--package-name', nargs='?')
+    # Use `-V` for version (from [common Unix flags][1]).
+    #
+    # [1]: https://unix.stackexchange.com/a/108141/187716
+    parser.add_argument('-V', '--version-number', nargs='?')
 
     parsed_args = parser.parse_args()
     if not parsed_args.source_dir:
@@ -47,7 +51,7 @@ def parse_args(args=None):
     return parsed_args
 
 
-def build(source_dir, target_dir, package_name=None):
+def build(source_dir, target_dir, package_name=None, version_number=None):
     '''
     Create a release of a MicroDrop plugin source directory in the target
     directory path.
@@ -63,6 +67,9 @@ def build(source_dir, target_dir, package_name=None):
 
         Change directory into source directory before running ``git archive``.
 
+    .. versionchanged:: 0.25
+        Add optional :data:`version_number` argument.
+
     Parameters
     ----------
     source_dir : str
@@ -71,6 +78,11 @@ def build(source_dir, target_dir, package_name=None):
         Target directory.
     package_name : str, optional
         Name of plugin Conda package (defaults to name of :data:`target_dir`).
+    version_number : str, optional
+        Package version number.
+
+        If not specified, assume version package exposes version using
+        `versioneer <https://github.com/warner/python-versioneer>`_.
     '''
     source_dir = ph.path(source_dir).realpath()
     target_dir = ph.path(target_dir).realpath()
@@ -110,16 +122,24 @@ def build(source_dir, target_dir, package_name=None):
     original_dir = ph.path(os.getcwd())
     try:
         os.chdir(source_dir)
-        import _version as v
+        if version_number is None:
+            # Assume versioneer is being used for managing version.
+            import _version as v
+
+            version_info = {'version': v.get_versions()['version'],
+                            'versioneer': v.get_versions()}
+        else:
+            # Version number was specified explicitly.
+            version_info = {'version': version_number}
     finally:
         os.chdir(original_dir)
 
     # Create properties dictionary object (cast types, e.g., `ph.path`, to
     # strings for cleaner YAML dump).
     properties = {'package_name': package_name,
-                  'plugin_name': str(target_dir.name),
-                  'version': v.get_versions()['version'],
-                  'versioneer': v.get_versions()}
+                  'plugin_name': str(target_dir.name)}
+    properties.update(version_info)
+
     with target_dir.joinpath('properties.yml').open('w') as properties_yml:
         # Dump properties to YAML-formatted file.
         # Setting `default_flow_style=False` writes each property on a separate
@@ -131,7 +151,8 @@ def main(args=None):
     if args is None:
         args = parse_args()
     logger.debug('Arguments: %s', args)
-    build(args.source_dir, args.target_dir, package_name=args.package_name)
+    build(args.source_dir, args.target_dir, package_name=args.package_name,
+          version_number=args.version_number)
 
 
 if __name__ == '__main__':
