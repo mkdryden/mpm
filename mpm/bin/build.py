@@ -57,6 +57,9 @@ def build(source_dir, target_dir, package_name=None, version_number=None):
      - ``.conda-recipe/*``
      - ``.git/*``
 
+    .. versionchanged:: 0.25
+        Add optional :data:`version_number` argument.
+
     Parameters
     ----------
     source_dir : str
@@ -65,6 +68,11 @@ def build(source_dir, target_dir, package_name=None, version_number=None):
         Target directory.
     package_name : str, optional
         Name of plugin Conda package (defaults to name of :data:`target_dir`).
+    version_number : str, optional
+        Package version number.
+
+        If not specified, assume version package exposes version using
+        `versioneer <https://github.com/warner/python-versioneer>`_.
     '''
     source_dir = ph.path(source_dir).realpath()
     target_dir = ph.path(target_dir).realpath()
