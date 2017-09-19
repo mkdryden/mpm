@@ -12,9 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args(args=None):
-    '''Parses arguments, returns ``(options, args)``.'''
+    '''
+    Parses arguments, returns ``(options, args)``.
+
+    .. versionchanged:: 0.24.1
+        Fix handling of optional :data:`args`.
+    '''
     if args is None:
-        args = sys.argv
+        args = sys.argv[1:]
 
     parser = argparse.ArgumentParser(description='MicroDrop plugin '
                                      'Conda recipe builder')
@@ -53,6 +58,11 @@ def build(source_dir, target_dir, package_name=None):
      - ``.conda-recipe/*``
      - ``.git/*``
 
+    .. versionchanged:: 0.24.1
+        Remove temporary archive after extraction.
+
+        Change directory into source directory before running ``git archive``.
+
     Parameters
     ----------
     source_dir : str
@@ -76,11 +86,19 @@ def build(source_dir, target_dir, package_name=None):
     # Export git archive, which substitutes version expressions in
     # `_version.py` to reflect the state (i.e., revision and tag info) of the
     # git repository.
-    sp.check_call(['git', 'archive', '-o', source_archive, 'HEAD'], shell=True)
+    original_dir = ph.path(os.getcwd())
+    try:
+        os.chdir(source_dir)
+        sp.check_call(['git', 'archive', '-o', source_archive, 'HEAD'],
+                      shell=True)
+    finally:
+        os.chdir(original_dir)
 
     # Extract exported git archive to Conda MicroDrop plugins directory.
     with zipfile.ZipFile(source_archive, 'r') as zip_ref:
         zip_ref.extractall(target_dir)
+    # Extraction is complete.  Remove temporary archive.
+    source_archive.remove()
 
     # Delete Conda build recipe from installed package.
     target_dir.joinpath('.conda-recipe').rmtree()
