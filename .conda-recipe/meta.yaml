@@ -25,7 +25,8 @@ build:
 requirements:
   build:
     - python 2.7*
-    - conda-helpers >=0.12.1
+    #: ..versionchanged:: X.X.X
+    - conda-helpers >=0.12.3
     - configobj <5.0.0  # Avoid _version.py polluting global site-packages
     - path_helpers >=0.5
     - paver
@@ -36,7 +37,8 @@ requirements:
     - si-prefix
 
   run:
-    - conda-helpers >=0.12.1
+    #: ..versionchanged:: X.X.X
+    - conda-helpers >=0.12.3
     - configobj <5.0.0  # Avoid _version.py polluting global site-packages
     - git
     - path_helpers >=0.5
