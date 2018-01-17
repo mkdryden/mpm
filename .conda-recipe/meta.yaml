@@ -25,7 +25,7 @@ build:
 requirements:
   build:
     - python 2.7*
-    #: ..versionchanged:: X.X.X
+    #: ..versionchanged:: 0.25.1
     - conda-helpers >=0.12.3
     - configobj <5.0.0  # Avoid _version.py polluting global site-packages
     - path_helpers >=0.5
@@ -37,7 +37,7 @@ requirements:
     - si-prefix
 
   run:
-    #: ..versionchanged:: X.X.X
+    #: ..versionchanged:: 0.25.1
     - conda-helpers >=0.12.3
     - configobj <5.0.0  # Avoid _version.py polluting global site-packages
     - git
