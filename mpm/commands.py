@@ -15,9 +15,7 @@ import os
 import tempfile as tmp
 
 from path_helpers import path
-from pip_helpers import CRE_PACKAGE
 import configobj
-import pip_helpers
 import progressbar
 import requests
 import tarfile
@@ -128,7 +126,14 @@ def get_plugins_directory(config_path=None, microdrop_user_root=None):
 def plugin_request(plugin_str):
     '''
     Extract plugin name and version specifiers from plugin descriptor string.
+
+    .. versionchanged:: 0.25.2
+        Import from `pip_helpers` locally to avoid error `sci-bots/mpm#5`_.
+
+        .. _sci-bots/mpm#5: https://github.com/sci-bots/mpm/issues/5
     '''
+    from pip_helpers import CRE_PACKAGE
+
     match = CRE_PACKAGE.match(plugin_str)
     if not match:
         raise ValueError('Invalid plugin descriptor. Must be like "foo", '
@@ -160,7 +165,14 @@ def install(plugin_package, plugins_directory, server_url=DEFAULT_SERVER_URL):
 
     .. _version specifiers:
         https://www.python.org/dev/peps/pep-0440/#version-specifiers
+
+    .. versionchanged:: 0.25.2
+        Import `pip_helpers` locally to avoid error `sci-bots/mpm#5`_.
+
+        .. _sci-bots/mpm#5: https://github.com/sci-bots/mpm/issues/5
     '''
+    import pip_helpers
+
     if path(plugin_package).isfile():
         plugin_is_file = True
         with open(plugin_package, 'rb') as plugin_file:
@@ -375,6 +387,13 @@ def search(plugin_package, server_url=DEFAULT_SERVER_URL):
 
     .. _version specifiers:
         https://www.python.org/dev/peps/pep-0440/#version-specifiers
+
+    .. versionchanged:: 0.25.2
+        Import `pip_helpers` locally to avoid error `sci-bots/mpm#5`_.
+
+        .. _sci-bots/mpm#5: https://github.com/sci-bots/mpm/issues/5
     '''
+    import pip_helpers
+
     # Look up latest release matching specifiers.
     return pip_helpers.get_releases(plugin_package, server_url=server_url)
