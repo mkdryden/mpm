@@ -91,13 +91,13 @@ def update_plugin_dialog(package_name=None, update_args=None,
         logger.info('Update all plugins installed as Conda packages.')
     else:
         # At least one plugin package name was explicitly specified.
-        if isinstance(package_name, types.StringTypes):
+        if isinstance(package_name, (str,)):
             package_name = [package_name]
 
         # Only update plugins that are installed as Conda packages.
         try:
             conda_package_infos = ch.package_version(package_name, verbose=False)
-        except ch.PackageNotFound, exception:
+        except ch.PackageNotFound as exception:
             # At least one specified plugin package name did not correspond to an
             # installed Conda package.
             if not ignore_not_installed:
@@ -195,7 +195,7 @@ def update_plugin_dialog(package_name=None, update_args=None,
                                          .format(package_name_list))
                     dialog.props.use_markup = True
             gobject.idle_add(_status)
-        except Exception, exception:
+        except Exception as exception:
             # Failure updating plugin.
             def _error():
                 dialog.props.text = ('Error updating plugin(s):\n<tt>{}</tt>'

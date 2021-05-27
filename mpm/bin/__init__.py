@@ -104,12 +104,12 @@ def validate_args(args):
 
     if getattr(args, 'command', None) == 'install':
         if args.requirements_file and not args.requirements_file.isfile():
-            print >> sys.stderr, ('Requirements file not available: {}'
-                                    .format(args.requirements_file))
+            print(('Requirements file not available: {}'
+                                    .format(args.requirements_file)), file=sys.stderr)
             raise SystemExit(-1)
         elif not args.plugin and not args.requirements_file:
-            print >> sys.stderr, ('Requirements file or at least one plugin '
-                                  'must be specified.')
+            print(('Requirements file or at least one plugin '
+                                  'must be specified.'), file=sys.stderr)
             raise SystemExit(-2)
     if hasattr(args, 'server_url'):
         logger.debug('Using MicroDrop index server: "%s"', args.server_url)
@@ -132,26 +132,26 @@ def main(args=None):
     args = validate_args(args)
     logger.debug('Arguments: %s', args)
     if args.command == 'freeze':
-        print '\n'.join(freeze(plugins_directory=args.plugins_directory))
+        print('\n'.join(freeze(plugins_directory=args.plugins_directory)))
     elif args.command == 'hook':
         if not args.plugin:
             plugin_paths = args.plugins_directory.dirs()
         else:
             plugin_paths = [args.plugins_directory.joinpath(p)
                             for p in args.plugin]
-        print 50 * '*'
-        print '# Processing `on_install` hook for: #\n'
-        print '\n'.join(['  - {}{}'.format(p.name, '' if p.exists()
+        print(50 * '*')
+        print('# Processing `on_install` hook for: #\n')
+        print('\n'.join(['  - {}{}'.format(p.name, '' if p.exists()
                                            else ' (not found)')
-                         for p in plugin_paths])
-        print ''
+                         for p in plugin_paths]))
+        print('')
         if args.hook == 'on_install':
             for plugin_path_i in plugin_paths:
-                print 50 * '-'
+                print(50 * '-')
                 if plugin_path_i.exists():
                     on_plugin_install(plugin_path_i)
                 else:
-                    print >> sys.stderr, '[warning] Skipping missing plugin'
+                    print('[warning] Skipping missing plugin', file=sys.stderr)
     elif args.command == 'install':
         if args.requirements_file:
             args.plugin = [line.strip() for line in
@@ -165,10 +165,10 @@ def main(args=None):
                                          server_url=args.server_url)
                 if not args.no_on_install:
                     on_plugin_install(path_i)
-            except KeyError, exception:
-                print '[{}] {}'.format(plugin_i, exception.message)
-            except ValueError, exception:
-                print exception.message
+            except KeyError as exception:
+                print('[{}] {}'.format(plugin_i, exception.message))
+            except ValueError as exception:
+                print(exception.message)
                 continue
     elif args.command == 'search':
         try:
@@ -177,25 +177,22 @@ def main(args=None):
             release_info = OrderedDict()
             release_info['plugin_name'] = [plugin_name] + ((len(releases) - 1)
                                                            * [''])
-            release_info['version'] = releases.keys()
+            release_info['version'] = list(releases.keys())
 
             for k in ['upload_time', 'size']:
-                release_info[k] = [r[k] for r in releases.values()]
+                release_info[k] = [r[k] for r in list(releases.values())]
 
-            release_info['upload_time'] = map(lambda timestamp: dt.datetime
+            release_info['upload_time'] = [dt.datetime
                                               .strptime(timestamp,
                                                         r'%Y-%m-%dT'
                                                         r'%H:%M:%S.%f')
-                                              .strftime('%Y-%m-%d %H:%M'),
-                                              release_info['upload_time'])
-            release_info['size'] = map(lambda s:
-                                       si.si_format(s, precision=0, format_str=
-                                                    '{value} {prefix}B'),
-                                       release_info['size'])
+                                              .strftime('%Y-%m-%d %H:%M') for timestamp in release_info['upload_time']]
+            release_info['size'] = [si.si_format(s, precision=0, format_str=
+                                                    '{value} {prefix}B') for s in release_info['size']]
 
-            print '\n' + pformat_dict(release_info)
-        except KeyError, exception:
-            print >> sys.stderr, exception.message
+            print('\n' + pformat_dict(release_info))
+        except KeyError as exception:
+            print(exception.message, file=sys.stderr)
     elif args.command == 'uninstall':
         for plugin_i in args.plugin:
             uninstall(plugin_package=plugin_i,

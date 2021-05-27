@@ -68,12 +68,7 @@ def readGitVersion():
         data, _ = proc.communicate()
         if proc.returncode:
             return None
-        ver = data.splitlines()[0].strip()
-        proc = subprocess.Popen(('git', 'rev-parse', '--abbrev-ref', 'HEAD'),
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        branch, _ = proc.communicate()
-        if proc.returncode:
-            return None
+        ver = data.splitlines()[0].strip().decode('utf-8')
     except:
         return None
 
@@ -86,17 +81,11 @@ def readGitVersion():
         return None
 
     commits = int(m.group('commits'))
-
     if not commits:
-        version = m.group('ver')
+        return m.group('ver')
     else:
-        version = '%s.post%d' % (
-            m.group('ver'), commits)
-
-    if branch.strip() != 'master':
-        version += '.dev%d' % int(m.group('sha'), 16)
-
-    return version
+        return '%s.post%d.dev%d' % (
+            m.group('ver'), commits, int(m.group('sha'), 16))
 
 
 def readReleaseVersion():
@@ -127,9 +116,9 @@ def getVersion():
         raise ValueError('Cannot find the version number')
     if version != release_version:
         writeReleaseVersion(version)
-    return version
+    return str(version)
 
 
 if __name__ == '__main__':
-    print getVersion()
-
+    print(getVersion())
+    

@@ -9,7 +9,7 @@ Inspired by `pip`.
     mpm uninstall <plugin-name>
     mpm freeze
 '''
-import cStringIO as StringIO
+import io as StringIO
 import logging
 import os
 import tempfile as tmp
@@ -110,7 +110,7 @@ def get_plugins_directory(config_path=None, microdrop_user_root=None):
         if not plugins_directory.isdir():
             raise IOError('Plugins directory does not exist: {}'
                           .format(plugins_directory))
-    except Exception, why:
+    except Exception as why:
         # Error looking up plugins directory in configuration file (maybe no
         # plugins directory was listed in configuration file?).
         plugins_directory = microdrop_user_root.joinpath('plugins')
@@ -186,7 +186,7 @@ def install(plugin_package, plugins_directory, server_url=DEFAULT_SERVER_URL):
         try:
             name, releases = pip_helpers.get_releases(plugin_package,
                                                       server_url=server_url)
-            version, release = releases.items()[-1]
+            version, release = list(releases.items())[-1]
         except KeyError:
             raise
 
@@ -211,7 +211,7 @@ def install(plugin_package, plugins_directory, server_url=DEFAULT_SERVER_URL):
 
     # Install latest release
     # ======================
-    print 'Installing `{}=={}`.'.format(name, version)
+    print('Installing `{}=={}`.'.format(name, version))
 
     if not plugin_is_file:
         # Download plugin release archive.
@@ -238,7 +238,7 @@ def install(plugin_package, plugins_directory, server_url=DEFAULT_SERVER_URL):
     # Ensure installed package and version does not match requested version.
     assert(all([plugin_metadata['package_name'] == name,
                 plugin_metadata['version'] == version]))
-    print '  \--> done'
+    print('  \--> done')
     plugin_archive_bytes.close()
     return plugin_path, plugin_metadata
 
@@ -328,14 +328,14 @@ def uninstall(plugin_package, plugins_directory):
 
     if existing_version is not None:
         # Uninstall existing package.
-        print 'Uninstalling `{}=={}`.'.format(plugin_package, existing_version)
+        print('Uninstalling `{}=={}`.'.format(plugin_package, existing_version))
     else:
-        print 'Uninstalling `{}`.'.format(plugin_package)
+        print('Uninstalling `{}`.'.format(plugin_package))
 
     # Uninstall latest release
     # ======================
     plugin_path.rmtree()
-    print '  \--> done'
+    print('  \--> done')
 
 
 def freeze(plugins_directory):

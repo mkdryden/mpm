@@ -51,9 +51,9 @@ def _dump_list(list_data, jsonify, stream=sys.stdout):
     stream : file-like
     '''
     if not jsonify and list_data:
-        print >> stream, '\n'.join(list_data)
+        print('\n'.join(list_data), file=stream)
     else:
-        print >> stream, json.dumps(list_data)
+        print(json.dumps(list_data), file=stream)
 
 
 def main(args=None):
@@ -68,19 +68,19 @@ def main(args=None):
         available_plugin_paths = sorted(MICRODROP_CONDA_SHARE
                                         .joinpath('plugins',
                                                   'available').dirs())
-        available_plugins = map(str, [plugin_i.name
-                                      for plugin_i in available_plugin_paths])
+        available_plugins = list(map(str, [plugin_i.name
+                                      for plugin_i in available_plugin_paths]))
         _dump_list(available_plugins, args.json)
     elif args.command == 'enabled':
         enabled_plugin_paths = sorted(MICRODROP_CONDA_ETC
                                       .joinpath('plugins', 'enabled').dirs())
-        enabled_plugins = map(str, [plugin_i.name
-                                    for plugin_i in enabled_plugin_paths])
+        enabled_plugins = list(map(str, [plugin_i.name
+                                    for plugin_i in enabled_plugin_paths]))
         _dump_list(enabled_plugins, args.json)
     elif args.command == 'enable':
         enabled_now = enable_plugin(args.plugin)
         enabled_plugins = sorted([name_i for name_i, enabled_i in
-                                  enabled_now.iteritems() if enabled_i])
+                                  enabled_now.items() if enabled_i])
 
         # Print list of plugins that were enabled (do not print names of
         # plugins that were already enabled).
@@ -89,7 +89,7 @@ def main(args=None):
         try:
             disable_plugin(args.plugin)
             disabled_plugins = sorted(args.plugin)
-        except IOError, exception:
+        except IOError as exception:
             if 'not found in' in str(exception):
                 logging.error(str(exception))
                 # No plugins were disabled since at least one plugin was not

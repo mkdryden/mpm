@@ -26,8 +26,8 @@ def on_plugin_install(plugin_directory, ostream=sys.stdout):
     current_directory = os.getcwd()
 
     plugin_directory = ph.path(plugin_directory).realpath()
-    print >> ostream, ('Processing post-install hook for: '
-                        '{}'.format(plugin_directory.name))
+    print(('Processing post-install hook for: '
+                        '{}'.format(plugin_directory.name)), file=ostream)
 
     hooks_dir_i = plugin_directory.joinpath('hooks/Windows').realpath()
     hook_path_i = hooks_dir_i.joinpath('on_plugin_install.bat')
@@ -46,7 +46,7 @@ def on_plugin_install(plugin_directory, ostream=sys.stdout):
                 raise RuntimeError('Process return code == {}'
                                    .format(process.returncode))
             return hook_path_i
-        except Exception, exception:
+        except Exception as exception:
             raise RuntimeError('Error running: {}\n{}'.format(hook_path_i,
                                                               exception))
         finally:

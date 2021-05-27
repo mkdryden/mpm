@@ -180,13 +180,13 @@ def available_packages(*args, **kwargs):
         plugin_packages_info_json = ch.conda_exec('search', '--json',
                                                   '^microdrop\.', verbose=False)
         return json.loads(plugin_packages_info_json)
-    except RuntimeError, exception:
+    except RuntimeError as exception:
         if 'CondaHTTPError' in str(exception):
             logger.warning('Could not connect to Conda server.')
         else:
             logger.warning('Error querying available MicroDrop plugins.',
                            exc_info=True)
-    except Exception, exception:
+    except Exception as exception:
         logger.warning('Error querying available MicroDrop plugins.',
                        exc_info=True)
     return {}
@@ -220,7 +220,7 @@ def install(plugin_name, *args, **kwargs):
     dict
         Conda installation log object (from JSON Conda install output).
     '''
-    if isinstance(plugin_name, types.StringTypes):
+    if isinstance(plugin_name, (str,)):
         plugin_name = [plugin_name]
 
     # Perform installation
@@ -322,7 +322,7 @@ def uninstall(plugin_name, *args):
     dict
         Conda uninstallation log object (from JSON Conda uninstall output).
     '''
-    if isinstance(plugin_name, types.StringTypes):
+    if isinstance(plugin_name, (str,)):
         plugin_name = [plugin_name]
 
     available_path = MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')
@@ -373,7 +373,7 @@ def enable_plugin(plugin_name):
     IOError
         If plugin is not installed to ``<conda prefix>/share/microdrop/plugins/available/``.
     '''
-    if isinstance(plugin_name, types.StringTypes):
+    if isinstance(plugin_name, (str,)):
         plugin_name = [plugin_name]
         singleton = True
     else:
@@ -422,7 +422,7 @@ def enable_plugin(plugin_name):
             logger.debug('Plugin already enabled: `%s` -> `%s`', plugin_path_i,
                          plugin_link_path_i)
             enabled_now[plugin_path_i.name] = False
-    return enabled_now if not singleton else enabled_now.values()[0]
+    return enabled_now if not singleton else list(enabled_now.values())[0]
 
 
 def disable_plugin(plugin_name):
@@ -439,7 +439,7 @@ def disable_plugin(plugin_name):
     IOError
         If plugin is not enabled.
     '''
-    if isinstance(plugin_name, types.StringTypes):
+    if isinstance(plugin_name, (str,)):
         plugin_name = [plugin_name]
 
     # Verify all specified plugins are currently enabled.
@@ -519,7 +519,7 @@ def update(*args, **kwargs):
                            for plugin_i in installed_plugins_]
         if package_name is None:
             package_name = plugin_packages
-        elif isinstance(package_name, types.StringTypes):
+        elif isinstance(package_name, (str,)):
             package_name = [package_name]
         logger.info('Installing any available updates for plugins: %s',
                     ','.join('`{}`'.format(package_name_i)
@@ -527,7 +527,7 @@ def update(*args, **kwargs):
         # Attempt to install plugin packages.
         try:
             install_log = install(package_name, *args, **kwargs)
-        except RuntimeError, exception:
+        except RuntimeError as exception:
             if 'CondaHTTPError' in str(exception):
                 raise IOError('Error accessing update server.')
             else:
@@ -628,7 +628,7 @@ def installed_plugins(only_conda=False):
                              for plugin_i in installed_plugins_]
             conda_package_infos = ch.package_version(package_names,
                                                      verbose=False)
-        except ch.PackageNotFound, exception:
+        except ch.PackageNotFound as exception:
             # At least one specified plugin package name did not correspond to an
             # installed Conda package.
             logger.warning(str(exception))
@@ -705,7 +705,7 @@ def enabled_plugins(installed_only=True):
             package_names = [properties_i['package_name']
                              for properties_i in enabled_plugins_]
             installed_info = ch.package_version(package_names, verbose=False)
-        except ch.PackageNotFound, exception:
+        except ch.PackageNotFound as exception:
             # Failed to find a corresponding installed Conda package for at
             # least one enabled plugin.
             logger.warning(str(exception))

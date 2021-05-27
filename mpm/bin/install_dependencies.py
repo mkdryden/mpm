@@ -49,18 +49,18 @@ def install_dependencies(plugins_directory, ostream=sys.stdout):
     '''
     plugin_directories = plugins_directory.realpath().dirs()
 
-    print >> ostream, 50 * '*'
-    print >> ostream, 'Processing plugins:'
-    print >> ostream, '\n'.join(['  - {}'.format(p)
-                                    for p in plugin_directories])
-    print >> ostream, '\n' + 50 * '-' + '\n'
+    print(50 * '*', file=ostream)
+    print('Processing plugins:', file=ostream)
+    print('\n'.join(['  - {}'.format(p)
+                                    for p in plugin_directories]), file=ostream)
+    print('\n' + 50 * '-' + '\n', file=ostream)
 
     for plugin_dir_i in plugin_directories:
         try:
             on_plugin_install(plugin_dir_i, ostream=ostream)
-        except RuntimeError, exception:
-            print exception
-        print >> ostream, '\n' + 50 * '-' + '\n'
+        except RuntimeError as exception:
+            print(exception)
+        print('\n' + 50 * '-' + '\n', file=ostream)
 
 
 def parse_args(args=None):
